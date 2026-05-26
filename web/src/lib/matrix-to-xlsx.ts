@@ -1,5 +1,9 @@
 import ExcelJS from "exceljs";
-import type { AssertionMatrix } from "@/lib/assertion-matrix";
+import {
+  ASSERTION_LABELS,
+  TESTING_APPROACH_LABELS,
+  type AssertionMatrix,
+} from "@/lib/assertion-matrix";
 
 // Render an AssertionMatrix as a workbook buffer ready to write or stream.
 // Layout: one sheet ("Assertion Plan") with a real Excel Table; second sheet
@@ -50,10 +54,12 @@ export async function matrixToXlsx(matrix: AssertionMatrix): Promise<Buffer> {
       pyBalance: r.pyBalance ?? "",
       materialAccount: r.materialAccount ? "Yes" : "No",
       overallRiskLevel: r.overallRiskLevel,
-      relevantAssertions: r.relevantAssertions.join(", "),
+      relevantAssertions: r.relevantAssertions
+        .map((a) => ASSERTION_LABELS[a])
+        .join(", "),
       risks: r.risks.join("\n"),
       pyExceptions: r.pyExceptions.join("\n"),
-      plannedApproach: r.plannedApproach,
+      plannedApproach: TESTING_APPROACH_LABELS[r.plannedApproach],
       approachRationale: r.approachRationale,
       citation: r.citation,
     }),

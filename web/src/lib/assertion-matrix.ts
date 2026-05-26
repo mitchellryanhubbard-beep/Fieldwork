@@ -23,12 +23,36 @@ export const ASSERTIONS = [
   "Presentation",
 ] as const;
 
+// Display labels for AICPA assertion vocabulary. Enum stays PascalCase
+// (compact, JSON-friendly); humans see spaced form in workpapers + UI.
+export const ASSERTION_LABELS: Record<(typeof ASSERTIONS)[number], string> = {
+  Existence: "Existence",
+  Completeness: "Completeness",
+  Accuracy: "Accuracy",
+  ValuationAndAllocation: "Valuation and Allocation",
+  RightsAndObligations: "Rights and Obligations",
+  ClassificationAndUnderstandability: "Classification and Understandability",
+  CutOff: "Cut-Off",
+  Occurrence: "Occurrence",
+  Presentation: "Presentation",
+};
+
 export const TESTING_APPROACHES = [
   "SubstantiveDetail",
   "Analytical",
   "TestOfControls",
   "Mixed",
 ] as const;
+
+export const TESTING_APPROACH_LABELS: Record<
+  (typeof TESTING_APPROACHES)[number],
+  string
+> = {
+  SubstantiveDetail: "Substantive Detail",
+  Analytical: "Analytical",
+  TestOfControls: "Test of Controls",
+  Mixed: "Mixed",
+};
 
 export const ACCOUNT_TYPES = [
   "Asset",

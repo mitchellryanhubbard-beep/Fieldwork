@@ -11,6 +11,29 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import ExcelJS from "exceljs";
 
+// Mirror of ASSERTION_LABELS + TESTING_APPROACH_LABELS in
+// web/src/lib/assertion-matrix.ts. Kept in sync by hand — this script is
+// plain ESM so it can't import the TS module directly.
+const ASSERTION_LABELS = {
+  Existence: "Existence",
+  Completeness: "Completeness",
+  Accuracy: "Accuracy",
+  ValuationAndAllocation: "Valuation and Allocation",
+  RightsAndObligations: "Rights and Obligations",
+  ClassificationAndUnderstandability: "Classification and Understandability",
+  CutOff: "Cut-Off",
+  Occurrence: "Occurrence",
+  Presentation: "Presentation",
+};
+const TESTING_APPROACH_LABELS = {
+  SubstantiveDetail: "Substantive Detail",
+  Analytical: "Analytical",
+  TestOfControls: "Test of Controls",
+  Mixed: "Mixed",
+};
+const lblA = (a) => ASSERTION_LABELS[a] ?? a;
+const lblT = (t) => TESTING_APPROACH_LABELS[t] ?? t;
+
 const env = Object.fromEntries(
   readFileSync(".env.local", "utf8")
     .split(/\r?\n/)
