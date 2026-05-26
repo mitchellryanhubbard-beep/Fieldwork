@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import ExcelJS from "exceljs";
 
 const env = Object.fromEntries(
   readFileSync(".env.local", "utf8")
@@ -171,6 +172,103 @@ const md = [
 const mdPath = resolve(outDir, "hartwell-matrix.md");
 writeFileSync(mdPath, md);
 console.log(`✓ readable Markdown → ${mdPath}`);
+
+// --- save as xlsx (re-implemented inline so this script stays SDK-free) ---
+const wb = new ExcelJS.Workbook();
+wb.creator = "Fieldwork";
+wb.created = new Date(m.generatedAt);
+const sheet = wb.addWorksheet("Assertion Plan", { views: [{ state: "frozen", ySplit: 1 }] });
+
+const columns = [
+  { header: "#", key: "rowNum", width: 4 },
+  { header: "Account", key: "account", width: 38 },
+  { header: "Type", key: "accountType", width: 10 },
+  { header: "CY Balance", key: "cyBalance", width: 16 },
+  { header: "PY Balance", key: "pyBalance", width: 16 },
+  { header: "Material?", key: "materialAccount", width: 10 },
+  { header: "Overall Risk", key: "overallRiskLevel", width: 12 },
+  { header: "Assertions", key: "relevantAssertions", width: 36 },
+  { header: "Risks", key: "risks", width: 60 },
+  { header: "PY Exceptions", key: "pyExceptions", width: 36 },
+  { header: "Planned Approach", key: "plannedApproach", width: 18 },
+  { header: "Rationale", key: "approachRationale", width: 60 },
+  { header: "Citation", key: "citation", width: 50 },
+];
+sheet.columns = columns;
+
+const flatRows = m.rows.map((r, i) => ({
+  rowNum: i + 1,
+  account: r.account,
+  accountType: r.accountType,
+  cyBalance: r.cyBalance,
+  pyBalance: r.pyBalance ?? "",
+  materialAccount: r.materialAccount ? "Yes" : "No",
+  overallRiskLevel: r.overallRiskLevel,
+  relevantAssertions: r.relevantAssertions.join(", "),
+  risks: r.risks.join("\n"),
+  pyExceptions: r.pyExceptions.join("\n"),
+  plannedApproach: r.plannedApproach,
+  approachRationale: r.approachRationale,
+  citation: r.citation,
+}));
+sheet.addRows(flatRows);
+
+sheet.addTable({
+  name: "FieldworkAssertionPlan",
+  ref: "A1",
+  headerRow: true,
+  style: { theme: "TableStyleMedium2", showRowStripes: true },
+  columns: columns.map((c) => ({ name: c.header, filterButton: true })),
+  rows: flatRows.map((r) => columns.map((c) => r[c.key])),
+});
+
+const headerRow = sheet.getRow(1);
+headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+headerRow.alignment = { vertical: "middle", horizontal: "left" };
+headerRow.height = 22;
+
+sheet.getColumn("cyBalance").numFmt = '"$"#,##0;[Red]("$"#,##0)';
+sheet.getColumn("pyBalance").numFmt = '"$"#,##0;[Red]("$"#,##0)';
+
+sheet.eachRow({ includeEmpty: false }, (row, rowIndex) => {
+  if (rowIndex === 1) return;
+  row.alignment = { vertical: "top", wrapText: true };
+  row.height = Math.max(row.height ?? 0, 60);
+});
+
+const riskCol = sheet.getColumn("overallRiskLevel");
+riskCol.eachCell({ includeEmpty: false }, (cell, rowIndex) => {
+  if (rowIndex === 1) return;
+  const val = String(cell.value ?? "");
+  const fgColor =
+    val === "High" ? "FFFADBD8" :
+    val === "Moderate" ? "FFFFF3CD" :
+    val === "Low" ? "FFD4EDDA" : null;
+  if (fgColor) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fgColor } };
+  cell.font = { bold: true };
+});
+
+const notesSheet = wb.addWorksheet("Engagement Notes");
+notesSheet.columns = [{ header: "Field", key: "k", width: 22 }, { header: "Value", key: "v", width: 110 }];
+notesSheet.getRow(1).font = { bold: true };
+notesSheet.addRows([
+  { k: "Engagement ID", v: m.engagementId },
+  { k: "Generated", v: m.generatedAt },
+  { k: "Model", v: m.modelVersion },
+  { k: "Rows", v: m.rows.length },
+]);
+if (m.notes) {
+  notesSheet.addRow({});
+  const nh = notesSheet.addRow({ k: "Model notes (caveats)", v: "" });
+  nh.font = { bold: true };
+  const nc = notesSheet.addRow({ k: "", v: m.notes });
+  nc.alignment = { vertical: "top", wrapText: true };
+  nc.height = Math.max(m.notes.split("\n").length * 18, 120);
+}
+
+const xlsxPath = resolve(outDir, "hartwell-matrix.xlsx");
+await wb.xlsx.writeFile(xlsxPath);
+console.log(`✓ Excel workbook → ${xlsxPath}`);
 
 if (cleanup) {
   await sb.from("engagements").delete().eq("id", engagementId);
