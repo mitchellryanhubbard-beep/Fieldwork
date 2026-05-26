@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "probe": "node scripts/probe.mjs",
-    "ensure-bucket": "node scripts/ensure-bucket.mjs"
+    "ensure-bucket": "node scripts/ensure-bucket.mjs",
+    "check:routes": "node scripts/check-routes.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
