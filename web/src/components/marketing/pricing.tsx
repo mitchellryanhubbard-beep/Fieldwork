@@ -9,7 +9,7 @@ type Tier = {
   desc: string;
   cta: string;
   ctaHref: string;
-  ctaVariant: "gold" | "goldOutline";
+  ctaVariant: "gold" | "navyOutline";
   featured?: boolean;
 };
 
@@ -21,7 +21,7 @@ const TIERS: Tier[] = [
     desc: "For small CPA firms with 1–5 users. Limited engagements and AI runs.",
     cta: "Start free trial",
     ctaHref: "/app/engagements/new",
-    ctaVariant: "goldOutline",
+    ctaVariant: "navyOutline",
   },
   {
     name: "Pro",
@@ -40,7 +40,7 @@ const TIERS: Tier[] = [
     desc: "SSO, audit logs, advanced controls, and dedicated support for large firms.",
     cta: "Talk to sales",
     ctaHref: "#cta",
-    ctaVariant: "goldOutline",
+    ctaVariant: "navyOutline",
   },
 ];
 

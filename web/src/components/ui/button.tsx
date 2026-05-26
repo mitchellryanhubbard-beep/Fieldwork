@@ -22,6 +22,8 @@ const buttonVariants = cva(
           "bg-accent text-primary border-accent shadow-sm hover:brightness-105 active:brightness-95 focus-visible:ring-primary/40 focus-visible:border-primary/40",
         goldOutline:
           "border-accent text-primary bg-transparent hover:bg-accent/10 active:bg-accent/15",
+        navyOutline:
+          "border-primary/40 text-primary bg-transparent hover:bg-primary/5 active:bg-primary/10",
       },
       size: {
         default:

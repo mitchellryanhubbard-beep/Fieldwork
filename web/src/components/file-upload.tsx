@@ -62,7 +62,7 @@ export function FileUpload({
 
   return (
     <div className="rounded-xl border border-primary/10 bg-card p-5">
-      <p className="font-display text-lg font-medium text-primary">{title}</p>
+      <h3 className="font-display text-lg font-medium text-primary">{title}</h3>
       <p className="mt-1 text-sm text-foreground/70">{description}</p>
       {current ? (
         <div className="mt-4 rounded-lg border border-primary/10 bg-secondary/40 p-3 text-sm">

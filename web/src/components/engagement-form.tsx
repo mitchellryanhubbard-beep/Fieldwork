@@ -384,7 +384,7 @@ export function EngagementForm({
         </div>
       ) : null}
 
-      <div className="flex justify-end gap-3 pt-2">
+      <div className="sticky bottom-0 -mx-6 mt-4 flex justify-end gap-3 border-t border-primary/10 bg-background/85 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <Button type="submit" disabled={isPending} variant="gold">
           {isPending
             ? "Saving…"

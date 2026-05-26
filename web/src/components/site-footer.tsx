@@ -18,6 +18,7 @@ export function SiteFooter() {
             { label: "Features", href: "#product" },
             { label: "Pricing", href: "#pricing" },
             { label: "Trust", href: "#trust" },
+            { label: "Changelog", href: "#" },
           ]}
         />
         <FooterCol

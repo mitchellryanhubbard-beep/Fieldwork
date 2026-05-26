@@ -16,6 +16,27 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const USD_COMPACT = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+// Returns "FY2024 Audits" when every engagement shares a fiscal year (the
+// common case), or "All engagements" when the list spans multiple years.
+function deriveHeading(
+  engagements: Awaited<ReturnType<typeof listEngagements>>,
+): string {
+  if (engagements.length === 0) return "All engagements";
+  const years = new Set(engagements.map((e) => e.fiscalYearEnd.slice(0, 4)));
+  if (years.size === 1) {
+    const [year] = years;
+    return `FY${year} Audits`;
+  }
+  return "All engagements";
+}
+
 export default async function AppHome() {
   let engagements: Awaited<ReturnType<typeof listEngagements>> = [];
   let loadError: string | null = null;
@@ -26,6 +47,8 @@ export default async function AppHome() {
     loadError = err instanceof Error ? err.message : String(err);
   }
 
+  const heading = deriveHeading(engagements);
+
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-16">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
@@ -33,7 +56,7 @@ export default async function AppHome() {
       </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-4xl font-medium tracking-tight text-primary">
-          FY2024 Audits
+          {heading}
         </h1>
         <Link
           href="/app/engagements/new"
@@ -109,6 +132,10 @@ export default async function AppHome() {
                     </Chip>
                     <span className="font-mono text-sm text-foreground/70">
                       FYE {e.fiscalYearEnd}
+                      <span className="text-foreground/40"> &middot; </span>
+                      PM {USD_COMPACT.format(e.performanceMateriality)}
+                      <span className="text-foreground/40"> &middot; </span>
+                      CTT {USD_COMPACT.format(e.clearlyTrivialThreshold)}
                     </span>
                   </div>
                 </Link>

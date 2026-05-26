@@ -23,7 +23,7 @@ export function Hero() {
         </Link>
         <Link
           href="#cta"
-          className={buttonVariants({ variant: "goldOutline", size: "lg" })}
+          className={buttonVariants({ variant: "navyOutline", size: "lg" })}
         >
           Book a demo
         </Link>
