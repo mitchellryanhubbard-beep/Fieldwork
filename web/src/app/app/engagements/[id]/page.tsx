@@ -19,6 +19,13 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const USD_COMPACT = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 type Params = { id: string };
 
 export default async function EditEngagementPage({
@@ -58,10 +65,18 @@ export default async function EditEngagementPage({
           <h1 className="font-display text-3xl font-medium tracking-tight text-primary">
             {v.clientName || "Untitled engagement"}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-foreground/70">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-foreground/70">
             <Chip>{FRAMEWORK_LABELS[v.framework]}</Chip>
             <Chip>{INDUSTRY_LABELS[v.industry]}</Chip>
-            <span className="font-mono text-sm">FYE {v.fiscalYearEnd}</span>
+            <span className="font-mono text-sm">
+              FYE {v.fiscalYearEnd}
+              <span className="text-foreground/40"> &middot; </span>
+              M {USD_COMPACT.format(v.overallMateriality)}
+              <span className="text-foreground/40"> &middot; </span>
+              PM {USD_COMPACT.format(v.performanceMateriality)}
+              <span className="text-foreground/40"> &middot; </span>
+              CTT {USD_COMPACT.format(v.clearlyTrivialThreshold)}
+            </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

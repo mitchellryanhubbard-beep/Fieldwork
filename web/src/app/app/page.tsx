@@ -16,13 +16,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const USD_COMPACT = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
 // Returns "FY2024 Audits" when every engagement shares a fiscal year (the
 // common case), or "All engagements" when the list spans multiple years.
 function deriveHeading(
@@ -139,10 +132,6 @@ export default async function AppHome() {
                       </Chip>
                       <span className="font-mono text-sm text-foreground/70">
                         FYE {e.fiscalYearEnd}
-                        <span className="text-foreground/40"> &middot; </span>
-                        PM {USD_COMPACT.format(e.performanceMateriality)}
-                        <span className="text-foreground/40"> &middot; </span>
-                        CTT {USD_COMPACT.format(e.clearlyTrivialThreshold)}
                       </span>
                     </div>
                   </div>

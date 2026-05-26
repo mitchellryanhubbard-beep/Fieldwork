@@ -19,8 +19,6 @@ export type EngagementSummary = {
   fiscalYearEnd: string;
   framework: string;
   industry: string;
-  performanceMateriality: number;
-  clearlyTrivialThreshold: number;
   updatedAt: string;
 };
 
@@ -29,7 +27,7 @@ export async function listEngagements(): Promise<EngagementSummary[]> {
   const { data, error } = await sb
     .from("engagements")
     .select(
-      "id, client_name, fiscal_year_end, framework, industry, performance_materiality, clearly_trivial_threshold, updated_at",
+      "id, client_name, fiscal_year_end, framework, industry, updated_at",
     )
     .order("updated_at", { ascending: false });
 
@@ -41,8 +39,6 @@ export async function listEngagements(): Promise<EngagementSummary[]> {
     fiscalYearEnd: row.fiscal_year_end,
     framework: row.framework,
     industry: row.industry,
-    performanceMateriality: Number(row.performance_materiality),
-    clearlyTrivialThreshold: Number(row.clearly_trivial_threshold),
     updatedAt: row.updated_at,
   }));
 }
