@@ -40,7 +40,7 @@ export default async function EditEngagementPage({
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <nav className="mb-6 text-sm">
         <Link
-          href="/"
+          href="/app"
           className="text-muted-foreground hover:text-foreground hover:underline"
         >
           ← Engagements
@@ -58,7 +58,7 @@ export default async function EditEngagementPage({
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/engagements/${id}/export`}
+            href={`/app/engagements/${id}/export`}
             className={buttonVariants({ variant: "secondary" })}
           >
             Export JSON

@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { uploadFileAction } from "@/app/engagements/actions";
+import { uploadFileAction } from "@/app/app/engagements/actions";
 
 export type FileUploadProps = {
   engagementId: string;

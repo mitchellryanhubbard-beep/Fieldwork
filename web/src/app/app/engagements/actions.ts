@@ -25,11 +25,11 @@ export async function createEngagementAction(
   let newId: string;
   try {
     newId = await createEngagement(parsed.data);
-    revalidatePath("/");
+    revalidatePath("/app");
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }
-  redirect(`/engagements/${newId}`);
+  redirect(`/app/engagements/${newId}`);
 }
 
 export async function updateEngagementAction(
@@ -42,8 +42,8 @@ export async function updateEngagementAction(
   }
   try {
     await updateEngagement(id, parsed.data);
-    revalidatePath("/");
-    revalidatePath(`/engagements/${id}`);
+    revalidatePath("/app");
+    revalidatePath(`/app/engagements/${id}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
@@ -53,11 +53,11 @@ export async function updateEngagementAction(
 export async function deleteEngagementAction(id: string): Promise<ActionResult> {
   try {
     await deleteEngagement(id);
-    revalidatePath("/");
+    revalidatePath("/app");
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }
-  redirect("/");
+  redirect("/app");
 }
 
 export async function uploadFileAction(
@@ -77,7 +77,7 @@ export async function uploadFileAction(
 
   try {
     await uploadEngagementFile(engagementId, kindRaw, file);
-    revalidatePath(`/engagements/${engagementId}`);
+    revalidatePath(`/app/engagements/${engagementId}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: errorMessage(err) };

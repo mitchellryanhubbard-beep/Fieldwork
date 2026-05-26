@@ -13,7 +13,7 @@ export default function NewEngagementPage() {
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <nav className="mb-6 text-sm">
         <Link
-          href="/"
+          href="/app"
           className="text-muted-foreground hover:text-foreground hover:underline"
         >
           ← Engagements
