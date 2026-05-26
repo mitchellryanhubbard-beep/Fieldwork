@@ -11,6 +11,11 @@ import {
   ASSERTION_MATRIX_SYSTEM_PROMPT,
   buildAssertionMatrixUserMessage,
 } from "@/lib/assertion-matrix-prompt";
+import { parseTrialBalance, type TrialBalance } from "@/lib/tb-parser";
+import {
+  ENGAGEMENT_FILES_BUCKET,
+  getServerSupabase,
+} from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +61,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status });
   }
 
+  // Best-effort TB parse — if the file is missing, empty, or unparseable
+  // we fall back to the no-TB prompt path. We don't fail the matrix call
+  // on a parse failure; the engagement-setup-only flow still produces a
+  // reasonable first pass with a clear caveat in `notes`.
+  let trialBalance: TrialBalance | undefined;
+  let tbParseError: string | null = null;
+  if (engagement.cyTrialBalanceFile.sizeBytes > 0) {
+    try {
+      const sb = getServerSupabase();
+      const { data, error } = await sb.storage
+        .from(ENGAGEMENT_FILES_BUCKET)
+        .download(engagement.cyTrialBalanceFile.storagePath);
+      if (error || !data) {
+        throw new Error(`storage download: ${error?.message ?? "no data"}`);
+      }
+      const buffer = Buffer.from(await data.arrayBuffer());
+      trialBalance = await parseTrialBalance(buffer);
+    } catch (err) {
+      tbParseError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
   let client;
   try {
     client = getClaudeClient();
@@ -66,7 +93,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const userMessage = buildAssertionMatrixUserMessage(engagement);
+  const userMessage = buildAssertionMatrixUserMessage(engagement, trialBalance);
 
   let response;
   try {
@@ -139,6 +166,8 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     matrix: validated.data,
+    tbParsed: trialBalance ? trialBalance.accounts.length : 0,
+    tbParseError,
     usage: {
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,

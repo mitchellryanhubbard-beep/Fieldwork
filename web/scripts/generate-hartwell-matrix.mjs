@@ -96,24 +96,43 @@ await sb.from("engagement_business_changes").insert(
     position: i,
   })),
 );
-await sb.from("engagement_files").insert([
-  {
-    engagement_id: engagementId,
-    kind: "py_audit",
-    storage_path: `engagements/${engagementId}/py_audit-stub.pdf`,
-    original_filename: "Hartwell_FY2023_Signed_Audit_Opinion.pdf",
-    content_type: "application/pdf",
-    size_bytes: 0,
-  },
-  {
-    engagement_id: engagementId,
-    kind: "cy_tb",
-    storage_path: `engagements/${engagementId}/cy_tb-stub.xlsx`,
-    original_filename: "Hartwell_FY2024_TB.xlsx",
-    content_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    size_bytes: 0,
-  },
-]);
+// PY Audit remains a stub for now — we don't parse PDFs yet.
+await sb.from("engagement_files").insert({
+  engagement_id: engagementId,
+  kind: "py_audit",
+  storage_path: `engagements/${engagementId}/py_audit-stub.pdf`,
+  original_filename: "Hartwell_FY2023_Signed_Audit_Opinion.pdf",
+  content_type: "application/pdf",
+  size_bytes: 0,
+});
+
+// Upload the real TB so the matrix endpoint can fetch + parse it.
+const TB_PATH = "C:/Users/mitch/OneDrive/Documents/Fieldwork.ai/Testing/AR Testing/TB 12-31-24.xlsx";
+if (!existsSync(TB_PATH)) {
+  console.error(`✗ TB not found at ${TB_PATH}`);
+  process.exit(1);
+}
+const tbBuffer = readFileSync(TB_PATH);
+const tbStoragePath = `engagements/${engagementId}/cy_tb-${Date.now()}-Hartwell_TB_12-31-24.xlsx`;
+const { error: uploadError } = await sb.storage
+  .from("engagement-files")
+  .upload(tbStoragePath, tbBuffer, {
+    contentType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    upsert: false,
+  });
+if (uploadError) { console.error("TB upload FAIL:", uploadError); process.exit(1); }
+
+await sb.from("engagement_files").insert({
+  engagement_id: engagementId,
+  kind: "cy_tb",
+  storage_path: tbStoragePath,
+  original_filename: "TB 12-31-24.xlsx",
+  content_type:
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  size_bytes: tbBuffer.length,
+});
+console.log(`✓ real Hartwell TB uploaded (${tbBuffer.length.toLocaleString()} bytes)`);
 
 // --- call matrix endpoint ---
 console.log(`→ POST ${BASE}/api/claude/assertion-matrix  (~60-90s)`);
@@ -136,7 +155,9 @@ const m = json.matrix;
 console.log(`✓ matrix returned in ${elapsed}s — ${m.rows.length} rows, ${json.usage.outputTokens} output tokens`);
 
 // --- save raw JSON ---
-const jsonPath = resolve(outDir, "hartwell-matrix.json");
+// Timestamped output so re-runs don't clash with a copy you have open in Excel.
+const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+const jsonPath = resolve(outDir, `hartwell-matrix-${ts}.json`);
 writeFileSync(jsonPath, JSON.stringify(m, null, 2));
 console.log(`✓ raw JSON → ${jsonPath}`);
 
@@ -192,7 +213,7 @@ const md = [
     .join("\n"),
 ].join("\n");
 
-const mdPath = resolve(outDir, "hartwell-matrix.md");
+const mdPath = resolve(outDir, `hartwell-matrix-${ts}.md`);
 writeFileSync(mdPath, md);
 console.log(`✓ readable Markdown → ${mdPath}`);
 
@@ -217,25 +238,26 @@ const columns = [
   { header: "Rationale", key: "approachRationale", width: 60 },
   { header: "Citation", key: "citation", width: 50 },
 ];
-sheet.columns = columns;
+const bal = (n) => (n === null || n === 0 || n === undefined ? "—" : n);
 
 const flatRows = m.rows.map((r, i) => ({
   rowNum: i + 1,
   account: r.account,
   accountType: r.accountType,
-  cyBalance: r.cyBalance,
-  pyBalance: r.pyBalance ?? "",
+  cyBalance: bal(r.cyBalance),
+  pyBalance: bal(r.pyBalance),
   materialAccount: r.materialAccount ? "Yes" : "No",
   overallRiskLevel: r.overallRiskLevel,
-  relevantAssertions: r.relevantAssertions.join(", "),
+  relevantAssertions: r.relevantAssertions.map(lblA).join(", "),
   risks: r.risks.join("\n"),
   pyExceptions: r.pyExceptions.join("\n"),
-  plannedApproach: r.plannedApproach,
+  plannedApproach: lblT(r.plannedApproach),
   approachRationale: r.approachRationale,
   citation: r.citation,
 }));
-sheet.addRows(flatRows);
 
+// addTable handles BOTH headers and rows; do NOT also call sheet.columns or
+// addRows or you'll double-write and the data column gets mangled.
 sheet.addTable({
   name: "FieldworkAssertionPlan",
   ref: "A1",
@@ -244,14 +266,15 @@ sheet.addTable({
   columns: columns.map((c) => ({ name: c.header, filterButton: true })),
   rows: flatRows.map((r) => columns.map((c) => r[c.key])),
 });
+columns.forEach((c, i) => { sheet.getColumn(i + 1).width = c.width; });
 
 const headerRow = sheet.getRow(1);
 headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
 headerRow.alignment = { vertical: "middle", horizontal: "left" };
 headerRow.height = 22;
 
-sheet.getColumn("cyBalance").numFmt = '"$"#,##0;[Red]("$"#,##0)';
-sheet.getColumn("pyBalance").numFmt = '"$"#,##0;[Red]("$"#,##0)';
+sheet.getColumn(4).numFmt = '"$"#,##0;[Red]("$"#,##0);"—"';
+sheet.getColumn(5).numFmt = '"$"#,##0;[Red]("$"#,##0);"—"';
 
 sheet.eachRow({ includeEmpty: false }, (row, rowIndex) => {
   if (rowIndex === 1) return;
@@ -259,8 +282,7 @@ sheet.eachRow({ includeEmpty: false }, (row, rowIndex) => {
   row.height = Math.max(row.height ?? 0, 60);
 });
 
-const riskCol = sheet.getColumn("overallRiskLevel");
-riskCol.eachCell({ includeEmpty: false }, (cell, rowIndex) => {
+sheet.getColumn(7).eachCell({ includeEmpty: false }, (cell, rowIndex) => {
   if (rowIndex === 1) return;
   const val = String(cell.value ?? "");
   const fgColor =
@@ -289,7 +311,7 @@ if (m.notes) {
   nc.height = Math.max(m.notes.split("\n").length * 18, 120);
 }
 
-const xlsxPath = resolve(outDir, "hartwell-matrix.xlsx");
+const xlsxPath = resolve(outDir, `hartwell-matrix-${ts}.xlsx`);
 await wb.xlsx.writeFile(xlsxPath);
 console.log(`✓ Excel workbook → ${xlsxPath}`);
 

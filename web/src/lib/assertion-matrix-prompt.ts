@@ -4,6 +4,10 @@ import {
   RISK_LEVELS,
   TESTING_APPROACHES,
 } from "@/lib/assertion-matrix";
+import {
+  trialBalanceToPromptText,
+  type TrialBalance,
+} from "@/lib/tb-parser";
 
 // System prompt — frozen across requests (so the credential server can
 // cache the prefix later). Voice: senior auditor giving the staff their
@@ -41,8 +45,12 @@ export const ASSERTION_MATRIX_SYSTEM_PROMPT = [
 ].join("\n");
 
 // Per-engagement user message — concrete data, varies every call.
+// Optional `trialBalance` argument injects the real account list + CY/PY
+// balances + per-account materiality scoping into the prompt. When absent,
+// the model is told to flag that it's working without the TB.
 export function buildAssertionMatrixUserMessage(
   engagement: EngagementSetup,
+  trialBalance?: TrialBalance,
 ): string {
   const v = engagement;
   const lines: string[] = [];
@@ -97,15 +105,36 @@ export function buildAssertionMatrixUserMessage(
   }
   lines.push("");
 
-  lines.push("## Source Files (referenced for context, not attached here)");
+  lines.push("## Source Files");
   lines.push(`- PY Audit: ${v.pyAuditFile.originalFilename}`);
   lines.push(`- CY Trial Balance: ${v.cyTrialBalanceFile.originalFilename}`);
   lines.push("");
+
+  if (trialBalance) {
+    lines.push("## CY Trial Balance (PARSED — use these real balances + scoping)");
+    lines.push("");
+    lines.push(trialBalanceToPromptText(trialBalance));
+    lines.push("");
+    lines.push(
+      "Use the real account names, real CY + PY balances, and the per-account",
+      "materiality scoping column verbatim from the TB above. The `Scoped In`",
+      "/`Below PM` column reflects the engagement's performance materiality —",
+      "treat `Scoped In` accounts as material. If a row has a 'YES — See Notes'",
+      "PY exception flag, surface that in `pyExceptions` for the matching row.",
+    );
+  } else {
+    lines.push(
+      "Note: the trial balance is uploaded to Supabase Storage but was not",
+      "parsed into this prompt. Produce the matrix from the Engagement Setup",
+      "data above; return null for pyBalance and 0 for cyBalance, then call",
+      "out the missing TB in the `notes` field.",
+    );
+  }
+  lines.push("");
   lines.push(
-    "Note: the trial balance + PY audit are uploaded to Supabase Storage but",
-    "are not parsed into this prompt yet. Produce the matrix from the",
-    "Engagement Setup data above; flag any accounts you'd want to confirm",
-    "against the actual TB in the `notes` field.",
+    "The PY Audit (signed opinion + issued financial statements) is uploaded",
+    "but not parsed here. If you need PY exception detail beyond the TB's",
+    "exception column, flag it in `notes`.",
   );
   lines.push("");
 
@@ -113,7 +142,10 @@ export function buildAssertionMatrixUserMessage(
   lines.push(
     "Produce the assertion-risk matrix as JSON matching the supplied schema.",
     "One row per significant account. Anchor every row in the engagement",
-    "inputs above and cite the specific risk/change/exception that drove it.",
+    "inputs above and cite the specific risk/change/exception/TB line that",
+    "drove it. When a TB row is scoped 'Below PM', either omit it from the",
+    "matrix or include it only if a specific engagement-level risk lifts it",
+    "above its balance.",
   );
 
   return lines.join("\n");
