@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EngagementForm } from "@/components/engagement-form";
 import { FileUpload } from "@/components/file-upload";
+import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -63,7 +64,11 @@ export default async function EditEngagementPage({
             <span className="font-mono text-sm">FYE {v.fiscalYearEnd}</span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <GenerateMatrixButton
+            engagementId={id}
+            clientName={v.clientName || "engagement"}
+          />
           <Link
             href={`/app/engagements/${id}/export`}
             className={buttonVariants({ variant: "goldOutline" })}
