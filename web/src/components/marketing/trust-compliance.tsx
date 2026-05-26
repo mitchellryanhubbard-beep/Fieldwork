@@ -1,3 +1,5 @@
+import { SectionHeading } from "./section-heading";
+
 const BULLETS = [
   {
     title: "Zero-retention API",
@@ -20,9 +22,7 @@ const BULLETS = [
 export function TrustCompliance() {
   return (
     <section id="trust" className="mx-auto w-full max-w-6xl px-6 py-20">
-      <h2 className="max-w-2xl font-display text-3xl font-medium leading-tight tracking-tight text-primary sm:text-4xl">
-        Built for firm-grade trust.
-      </h2>
+      <SectionHeading>Built for firm-grade trust.</SectionHeading>
       <ul className="mt-10 grid gap-6 sm:grid-cols-2">
         {BULLETS.map((b) => (
           <li

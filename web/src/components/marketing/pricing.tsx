@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { SectionHeading } from "./section-heading";
 
 type Tier = {
   name: string;
@@ -47,9 +48,7 @@ export function Pricing() {
   return (
     <section id="pricing" className="bg-secondary/40 py-20">
       <div className="mx-auto w-full max-w-6xl px-6">
-        <h2 className="max-w-2xl font-display text-3xl font-medium leading-tight tracking-tight text-primary sm:text-4xl">
-          Per-seat pricing.
-        </h2>
+        <SectionHeading>Per-seat pricing.</SectionHeading>
         <p className="mt-3 max-w-xl text-foreground/70">
           14-day free trial. No card required during beta. 30-day money-back
           guarantee on paid plans.

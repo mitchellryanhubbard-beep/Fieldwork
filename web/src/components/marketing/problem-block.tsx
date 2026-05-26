@@ -1,3 +1,5 @@
+import { SectionHeading } from "./section-heading";
+
 const STATS = [
   { value: "~40%", label: "Hours on sample selection + tickmarks" },
   { value: "~25%", label: "Hours on analytical procedures" },
@@ -8,9 +10,9 @@ const STATS = [
 export function ProblemBlock() {
   return (
     <section className="mx-auto w-full max-w-6xl px-6 py-20">
-      <h2 className="max-w-2xl font-display text-3xl font-medium leading-tight tracking-tight text-primary sm:text-4xl">
+      <SectionHeading>
         What first-year staff actually spend time on.
-      </h2>
+      </SectionHeading>
       <p className="mt-3 max-w-xl text-foreground/70">
         Most of fieldwork is rote work that doesn&apos;t need judgment. Illustrative breakdown of a typical mid-market private audit.
       </p>

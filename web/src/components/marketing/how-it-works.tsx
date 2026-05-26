@@ -1,3 +1,5 @@
+import { SectionHeading } from "./section-heading";
+
 const STEPS = [
   {
     n: "01",
@@ -25,9 +27,9 @@ export function HowItWorks() {
   return (
     <section id="product" className="bg-secondary/40 py-20">
       <div className="mx-auto w-full max-w-6xl px-6">
-        <h2 className="max-w-2xl font-display text-3xl font-medium leading-tight tracking-tight text-primary sm:text-4xl">
+        <SectionHeading>
           From engagement setup to signed exception report.
-        </h2>
+        </SectionHeading>
         <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s) => (
             <li
