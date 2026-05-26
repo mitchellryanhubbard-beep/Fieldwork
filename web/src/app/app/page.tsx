@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
 import { listEngagements } from "@/lib/engagement-repo";
 import {
   FRAMEWORK_LABELS,
@@ -14,13 +15,6 @@ import {
 } from "@/lib/engagement-schema";
 
 export const dynamic = "force-dynamic";
-
-const USD_COMPACT = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
 
 export default async function AppHome() {
   let engagements: Awaited<ReturnType<typeof listEngagements>> = [];
@@ -124,13 +118,5 @@ export default async function AppHome() {
         )}
       </div>
     </main>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-primary/30 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-      {children}
-    </span>
   );
 }
