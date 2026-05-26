@@ -20,13 +20,7 @@ import {
 } from "@/lib/engagement-schema";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { NumberedSection } from "@/components/numbered-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -111,15 +105,12 @@ export function EngagementForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Client + Framework</CardTitle>
-          <CardDescription>
-            Drives industry-specific templates and assertion-risk mapping
-            downstream.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+      <NumberedSection
+        n={2}
+        title="Client + Framework"
+        description="Drives industry-specific templates and assertion-risk mapping downstream."
+      >
+        <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-2">
           <Field
             label="Client name"
             error={form.formState.errors.clientName?.message}
@@ -186,18 +177,15 @@ export function EngagementForm({
               </SelectContent>
             </Select>
           </Field>
-        </CardContent>
-      </Card>
+        </div>
+      </NumberedSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Materiality</CardTitle>
-          <CardDescription>
-            Overall materiality, performance materiality, and the clearly
-            trivial threshold drive scoping and exception flagging.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+      <NumberedSection
+        n={3}
+        title="Materiality"
+        description="Overall materiality, performance materiality, and the clearly trivial threshold drive scoping and exception flagging."
+      >
+        <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-3">
           <Field
             label="Overall materiality (USD)"
             error={form.formState.errors.overallMateriality?.message}
@@ -243,18 +231,15 @@ export function EngagementForm({
               />
             </Field>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </NumberedSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>CY Risk Profile</CardTitle>
-          <CardDescription>
-            Identified risks for the current year. Each item is consumed by the
-            assertion-risk matrix.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <NumberedSection
+        n={4}
+        title="CY Risk Profile"
+        description="Identified risks for the current year. Each item is consumed by the assertion-risk matrix."
+      >
+        <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5">
           <Field label="Narrative (optional)">
             <Textarea rows={3} {...form.register("riskNarrative")} />
           </Field>
@@ -314,18 +299,15 @@ export function EngagementForm({
               + Add risk
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </NumberedSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>CY Significant Business Changes</CardTitle>
-          <CardDescription>
-            Material changes since the prior year — management, systems, M&amp;A,
-            new products, etc.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <NumberedSection
+        n={5}
+        title="CY Significant Business Changes"
+        description="Material changes since the prior year — management, systems, M&A, new products, etc."
+      >
+        <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5">
           <Field label="Narrative (optional)">
             <Textarea rows={3} {...form.register("businessChangesNarrative")} />
           </Field>
@@ -390,20 +372,20 @@ export function EngagementForm({
               + Add change
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </NumberedSection>
 
       {serverError ? (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="text-destructive">Save failed</CardTitle>
-            <CardDescription>{serverError}</CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-5">
+          <p className="font-display text-lg font-medium text-destructive">
+            Save failed
+          </p>
+          <p className="mt-1 text-sm text-foreground/70">{serverError}</p>
+        </div>
       ) : null}
 
-      <div className="flex justify-end gap-3">
-        <Button type="submit" disabled={isPending}>
+      <div className="flex justify-end gap-3 pt-2">
+        <Button type="submit" disabled={isPending} variant="gold">
           {isPending
             ? "Saving…"
             : mode === "create"

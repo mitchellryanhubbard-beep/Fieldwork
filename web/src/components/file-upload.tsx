@@ -6,13 +6,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { uploadFileAction } from "@/app/app/engagements/actions";
 
 export type FileUploadProps = {
@@ -68,41 +61,37 @@ export function FileUpload({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {current ? (
-          <div className="mb-3 rounded-md border bg-muted/40 p-3 text-sm">
-            <div className="font-medium">{current.originalFilename}</div>
-            <div className="text-xs text-muted-foreground">
-              {formatBytes(current.sizeBytes)} · uploaded{" "}
-              {new Date(current.uploadedAt).toLocaleString()}
-            </div>
+    <div className="rounded-xl border border-primary/10 bg-card p-5">
+      <p className="font-display text-lg font-medium text-primary">{title}</p>
+      <p className="mt-1 text-sm text-foreground/70">{description}</p>
+      {current ? (
+        <div className="mt-4 rounded-lg border border-primary/10 bg-secondary/40 p-3 text-sm">
+          <div className="font-medium text-primary">
+            {current.originalFilename}
           </div>
-        ) : (
-          <p className="mb-3 text-sm text-muted-foreground">
-            No file uploaded yet.
-          </p>
-        )}
-        <form onSubmit={handleSubmit} className="flex flex-wrap gap-2">
-          <Input
-            ref={inputRef}
-            type="file"
-            accept={accept}
-            className="max-w-md"
-          />
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Uploading…" : current ? "Replace" : "Upload"}
-          </Button>
-        </form>
-        {error ? (
-          <p className="mt-2 text-xs text-destructive">{error}</p>
-        ) : null}
-      </CardContent>
-    </Card>
+          <div className="mt-0.5 font-mono text-xs text-foreground/60">
+            {formatBytes(current.sizeBytes)} · uploaded{" "}
+            {new Date(current.uploadedAt).toLocaleString()}
+          </div>
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-foreground/55">No file uploaded yet.</p>
+      )}
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap gap-2">
+        <Input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="max-w-md"
+        />
+        <Button type="submit" disabled={isPending} variant="gold">
+          {isPending ? "Uploading…" : current ? "Replace" : "Upload"}
+        </Button>
+      </form>
+      {error ? (
+        <p className="mt-2 text-xs text-destructive">{error}</p>
+      ) : null}
+    </div>
   );
 }
 
