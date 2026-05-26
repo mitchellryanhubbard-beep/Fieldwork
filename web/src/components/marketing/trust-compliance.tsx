@@ -1,0 +1,41 @@
+const BULLETS = [
+  {
+    title: "Zero-retention API",
+    body: "Client data is never stored or trained on. Verified at every code path that sends client content.",
+  },
+  {
+    title: "Audit trail on every cell",
+    body: "Source, prompt, and reasoning saved with each generated workpaper cell.",
+  },
+  {
+    title: "Never auto-concludes",
+    body: "Fieldwork flags exceptions; auditors form opinions. By design.",
+  },
+  {
+    title: "Framework templates",
+    body: "Distinct templates for AICPA, IFRS, and PCAOB engagements.",
+  },
+];
+
+export function TrustCompliance() {
+  return (
+    <section id="trust" className="mx-auto w-full max-w-6xl px-6 py-20">
+      <h2 className="max-w-2xl font-display text-3xl font-medium leading-tight tracking-tight text-primary sm:text-4xl">
+        Built for firm-grade trust.
+      </h2>
+      <ul className="mt-10 grid gap-6 sm:grid-cols-2">
+        {BULLETS.map((b) => (
+          <li
+            key={b.title}
+            className="border-l-2 border-accent pl-5"
+          >
+            <h3 className="font-display text-xl font-medium text-primary">
+              {b.title}
+            </h3>
+            <p className="mt-2 text-sm text-foreground/75">{b.body}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
