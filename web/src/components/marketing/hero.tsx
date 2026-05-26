@@ -12,7 +12,8 @@ export function Hero() {
       </h1>
       <p className="mt-6 max-w-xl text-lg leading-relaxed text-foreground/80">
         A copilot for staff auditors. Generates workpapers, designs samples,
-        runs analytics, and flags exceptions — without leaving the workbook.
+        performs detail testing, designs and runs analytics, and flags
+        exceptions — without leaving the workbook.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
         <Link
