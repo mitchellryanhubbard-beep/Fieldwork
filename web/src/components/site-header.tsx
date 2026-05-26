@@ -9,8 +9,11 @@ export function SiteHeader({ variant }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-primary/10 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
+        {/* Wordmark always returns to the public landing page, matching the
+            SaaS convention (Stripe, Vercel, Linear). Use the in-nav
+            "Engagements" link to get back to /app from within the app. */}
         <Link
-          href={variant === "marketing" ? "/" : "/app"}
+          href="/"
           className="font-display text-xl font-semibold tracking-tight text-primary"
         >
           FIELDWORK
