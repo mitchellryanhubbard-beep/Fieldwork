@@ -11,11 +11,9 @@ export function SiteHeader({ variant }: SiteHeaderProps) {
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
         <Link
           href={variant === "marketing" ? "/" : "/app"}
-          className="flex items-center gap-2 text-primary"
+          className="font-display text-xl font-semibold tracking-tight text-primary"
         >
-          <span className="font-display text-xl font-semibold tracking-tight">
-            FIELDWORK
-          </span>
+          FIELDWORK
         </Link>
 
         {variant === "marketing" ? (
@@ -44,14 +42,28 @@ export function SiteHeader({ variant }: SiteHeaderProps) {
             <Link href="/app" className="hover:underline">
               Engagements
             </Link>
-            <span className="text-primary/40">Settings</span>
-            <span className="text-primary/40">Help</span>
-            <span
-              aria-label="Account"
-              className="grid size-8 place-items-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed text-primary/55 disabled:opacity-100"
+            >
+              Settings
+            </button>
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed text-primary/55 disabled:opacity-100"
+            >
+              Help
+            </button>
+            <button
+              type="button"
+              disabled
+              aria-label="Account menu"
+              className="grid size-8 cursor-not-allowed place-items-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground disabled:opacity-100"
             >
               MH
-            </span>
+            </button>
           </nav>
         )}
       </div>
