@@ -1,0 +1,15 @@
+{
+  "name": "fieldwork",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fieldwork — Excel-native audit automation. Repo root holds shared specs and tooling; the Engagement Setup web app lives in web/.",
+  "type": "module",
+  "scripts": {
+    "validate:schema": "node scripts/validate-schema.mjs",
+    "validate:hartwell": "node scripts/validate-schema.mjs specs/fixtures/hartwell-fy2024.sample.json"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
+}

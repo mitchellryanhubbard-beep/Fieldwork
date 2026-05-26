@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "engagementId": "0d4b2e1a-7f3c-4f6d-9c2a-7b1e1f0a5a01",
+  "client": {
+    "name": "Hartwell Manufacturing Co.",
+    "fiscalYearEnd": "2024-12-31",
+    "reportingPeriodStart": "2024-01-01"
+  },
+  "framework": "AICPA",
+  "industry": "Manufacturing",
+  "pyAuditFile": {
+    "storagePath": "engagements/0d4b2e1a-7f3c-4f6d-9c2a-7b1e1f0a5a01/py-audit.pdf",
+    "originalFilename": "Hartwell_FY2023_Signed_Audit_Opinion.pdf",
+    "contentType": "application/pdf",
+    "sizeBytes": 1248576,
+    "uploadedAt": "2026-05-26T14:00:00Z"
+  },
+  "cyTrialBalanceFile": {
+    "storagePath": "engagements/0d4b2e1a-7f3c-4f6d-9c2a-7b1e1f0a5a01/cy-tb.xlsx",
+    "originalFilename": "Hartwell_FY2024_TB.xlsx",
+    "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "sizeBytes": 264192,
+    "uploadedAt": "2026-05-26T14:02:00Z"
+  },
+  "cyRiskProfile": {
+    "narrative": "Mid-market discrete manufacturer with concentrated customer base and significant raw-material exposure. Inventory and revenue recognition (cut-off) are the most sensitive areas; management uses standard costing with periodic variance write-offs.",
+    "items": [
+      {
+        "category": "Industry",
+        "description": "Steel and commodity input prices volatile through FY2024 — pressure on inventory valuation (LCM) and gross margin."
+      },
+      {
+        "category": "EntitySpecific",
+        "description": "Top three customers represent ~58% of revenue; concentration risk on accounts receivable collectability."
+      },
+      {
+        "category": "Fraud",
+        "description": "Standard fraud risk over revenue recognition (period-end cut-off) per AU-C 240."
+      },
+      {
+        "category": "SignificantEstimate",
+        "description": "Excess and obsolete inventory reserve is a significant management estimate."
+      }
+    ]
+  },
+  "cyBusinessChanges": {
+    "narrative": "New plant ERP cutover in Q2 FY2024; CFO change in Q3 FY2024.",
+    "items": [
+      {
+        "category": "SystemChange",
+        "description": "Implemented new ERP (cost accounting + inventory) at the Ohio plant in May 2024 — heightened IT-dependent control risk over inventory costing for the post-cutover period."
+      },
+      {
+        "category": "ManagementChange",
+        "description": "New CFO hired August 2024 (prior CFO retired)."
+      },
+      {
+        "category": "SignificantContract",
+        "description": "Three-year supply agreement signed with a Tier-1 OEM in Q4 FY2024 — material contract assets to evaluate."
+      }
+    ]
+  },
+  "materiality": {
+    "currency": "USD",
+    "overallMateriality": 450000,
+    "performanceMateriality": 337500,
+    "clearlyTrivialThreshold": 22500,
+    "basis": "Overall materiality = 5% of FY2024 pretax income ($9.0M). Performance materiality = 75% of overall. Clearly trivial threshold = 5% of performance materiality."
+  },
+  "createdAt": "2026-05-26T14:00:00Z",
+  "updatedAt": "2026-05-26T14:05:00Z"
+}

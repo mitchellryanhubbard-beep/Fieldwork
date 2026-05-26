@@ -1,0 +1,436 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useFieldArray, useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import {
+  EngagementFormSchema,
+  type EngagementFormValues,
+  FRAMEWORKS,
+  FRAMEWORK_LABELS,
+  INDUSTRIES,
+  INDUSTRY_LABELS,
+  RISK_CATEGORIES,
+  RISK_CATEGORY_LABELS,
+  BUSINESS_CHANGE_CATEGORIES,
+  BUSINESS_CHANGE_CATEGORY_LABELS,
+} from "@/lib/engagement-schema";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type SubmitArgs = {
+  values: EngagementFormValues;
+};
+
+type SubmitFn = (
+  args: SubmitArgs,
+) => Promise<{ ok: true; id?: string } | { ok: false; error: string }>;
+
+export type EngagementFormProps = {
+  mode: "create" | "edit";
+  defaultValues?: Partial<EngagementFormValues>;
+  onSubmitAction: SubmitFn;
+};
+
+const EMPTY_DEFAULTS: EngagementFormValues = {
+  clientName: "",
+  fiscalYearEnd: "",
+  reportingPeriodStart: "",
+  framework: "AICPA",
+  industry: "Manufacturing",
+  riskNarrative: "",
+  riskItems: [],
+  businessChangesNarrative: "",
+  businessChangeItems: [],
+  overallMateriality: 0,
+  performanceMateriality: 0,
+  clearlyTrivialThreshold: 0,
+  materialityBasis: "",
+};
+
+export function EngagementForm({
+  mode,
+  defaultValues,
+  onSubmitAction,
+}: EngagementFormProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const form = useForm<EngagementFormValues>({
+    resolver: zodResolver(EngagementFormSchema) as unknown as Resolver<EngagementFormValues>,
+    defaultValues: {
+      ...EMPTY_DEFAULTS,
+      ...defaultValues,
+    },
+    mode: "onBlur",
+  });
+
+  const riskItems = useFieldArray({
+    control: form.control,
+    name: "riskItems",
+  });
+  const businessChangeItems = useFieldArray({
+    control: form.control,
+    name: "businessChangeItems",
+  });
+
+  const onSubmit = form.handleSubmit((values) => {
+    setServerError(null);
+    startTransition(async () => {
+      const result = await onSubmitAction({ values });
+      if (!result.ok) {
+        setServerError(result.error);
+        toast.error("Save failed", { description: result.error });
+        return;
+      }
+      toast.success(mode === "create" ? "Engagement created" : "Engagement saved");
+      router.refresh();
+    });
+  });
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Client + Framework</CardTitle>
+          <CardDescription>
+            Drives industry-specific templates and assertion-risk mapping
+            downstream.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Client name"
+            error={form.formState.errors.clientName?.message}
+          >
+            <Input {...form.register("clientName")} />
+          </Field>
+          <Field
+            label="Fiscal year end"
+            error={form.formState.errors.fiscalYearEnd?.message}
+          >
+            <Input type="date" {...form.register("fiscalYearEnd")} />
+          </Field>
+          <Field
+            label="Reporting period start (optional)"
+            error={form.formState.errors.reportingPeriodStart?.message}
+          >
+            <Input type="date" {...form.register("reportingPeriodStart")} />
+          </Field>
+          <Field
+            label="Audit framework"
+            error={form.formState.errors.framework?.message}
+          >
+            <Select
+              value={form.watch("framework")}
+              onValueChange={(v) =>
+                form.setValue("framework", v as EngagementFormValues["framework"], {
+                  shouldDirty: true,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FRAMEWORKS.map((f) => (
+                  <SelectItem key={f} value={f}>
+                    {FRAMEWORK_LABELS[f]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field
+            label="Industry"
+            error={form.formState.errors.industry?.message}
+          >
+            <Select
+              value={form.watch("industry")}
+              onValueChange={(v) =>
+                form.setValue("industry", v as EngagementFormValues["industry"], {
+                  shouldDirty: true,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INDUSTRIES.map((i) => (
+                  <SelectItem key={i} value={i}>
+                    {INDUSTRY_LABELS[i]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Materiality</CardTitle>
+          <CardDescription>
+            Overall materiality, performance materiality, and the clearly
+            trivial threshold drive scoping and exception flagging.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <Field
+            label="Overall materiality (USD)"
+            error={form.formState.errors.overallMateriality?.message}
+          >
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...form.register("overallMateriality")}
+            />
+          </Field>
+          <Field
+            label="Performance materiality (USD)"
+            error={form.formState.errors.performanceMateriality?.message}
+          >
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...form.register("performanceMateriality")}
+            />
+          </Field>
+          <Field
+            label="Clearly trivial threshold (USD)"
+            error={form.formState.errors.clearlyTrivialThreshold?.message}
+          >
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...form.register("clearlyTrivialThreshold")}
+            />
+          </Field>
+          <div className="sm:col-span-3">
+            <Field
+              label="Basis"
+              error={form.formState.errors.materialityBasis?.message}
+            >
+              <Textarea
+                rows={3}
+                placeholder="e.g., Overall = 5% of pretax income; PM = 75% of overall; CTT = 5% of PM."
+                {...form.register("materialityBasis")}
+              />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>CY Risk Profile</CardTitle>
+          <CardDescription>
+            Identified risks for the current year. Each item is consumed by the
+            assertion-risk matrix.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Field label="Narrative (optional)">
+            <Textarea rows={3} {...form.register("riskNarrative")} />
+          </Field>
+          <div className="space-y-3">
+            {riskItems.fields.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No risks yet.</p>
+            ) : null}
+            {riskItems.fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[200px_1fr_auto]"
+              >
+                <Select
+                  value={form.watch(`riskItems.${index}.category`)}
+                  onValueChange={(v) =>
+                    form.setValue(
+                      `riskItems.${index}.category`,
+                      v as (typeof RISK_CATEGORIES)[number],
+                      { shouldDirty: true },
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RISK_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {RISK_CATEGORY_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Textarea
+                  rows={2}
+                  placeholder="Describe the risk"
+                  {...form.register(`riskItems.${index}.description`)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => riskItems.remove(index)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                riskItems.append({ category: "Other", description: "" })
+              }
+            >
+              + Add risk
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>CY Significant Business Changes</CardTitle>
+          <CardDescription>
+            Material changes since the prior year — management, systems, M&amp;A,
+            new products, etc.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Field label="Narrative (optional)">
+            <Textarea rows={3} {...form.register("businessChangesNarrative")} />
+          </Field>
+          <div className="space-y-3">
+            {businessChangeItems.fields.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No changes yet.</p>
+            ) : null}
+            {businessChangeItems.fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[220px_1fr_auto]"
+              >
+                <Select
+                  value={form.watch(`businessChangeItems.${index}.category`)}
+                  onValueChange={(v) =>
+                    form.setValue(
+                      `businessChangeItems.${index}.category`,
+                      v as (typeof BUSINESS_CHANGE_CATEGORIES)[number],
+                      { shouldDirty: true },
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUSINESS_CHANGE_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {BUSINESS_CHANGE_CATEGORY_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Textarea
+                  rows={2}
+                  placeholder="Describe the change"
+                  {...form.register(
+                    `businessChangeItems.${index}.description`,
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => businessChangeItems.remove(index)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                businessChangeItems.append({
+                  category: "Other",
+                  description: "",
+                })
+              }
+            >
+              + Add change
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {serverError ? (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-destructive">Save failed</CardTitle>
+            <CardDescription>{serverError}</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
+      <div className="flex justify-end gap-3">
+        <Button type="submit" disabled={isPending}>
+          {isPending
+            ? "Saving…"
+            : mode === "create"
+              ? "Create engagement"
+              : "Save changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}

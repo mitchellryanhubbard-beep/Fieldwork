@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fieldwork.ai/schemas/engagement-setup.schema.json",
+  "title": "Engagement Setup",
+  "description": "Contract for the output of the Fieldwork Engagement Setup web app. This is the single source of truth consumed by the Office.js add-in to drive assertion-risk matrix generation, workpaper scaffolding, and downstream testing. Locked seam between the web intake and the Excel add-in.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "engagementId",
+    "client",
+    "framework",
+    "industry",
+    "pyAuditFile",
+    "cyTrialBalanceFile",
+    "cyRiskProfile",
+    "cyBusinessChanges",
+    "materiality",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version this engagement was captured against. Bump for breaking changes."
+    },
+    "engagementId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable identifier for the engagement. Used as the join key across Supabase tables and storage objects."
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "fiscalYearEnd"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Legal name of the audit client."
+        },
+        "fiscalYearEnd": {
+          "type": "string",
+          "format": "date",
+          "description": "Last day of the fiscal year being audited (ISO 8601 date)."
+        },
+        "reportingPeriodStart": {
+          "type": "string",
+          "format": "date",
+          "description": "First day of the fiscal year being audited. Optional; derived as fiscalYearEnd minus 1 year when omitted."
+        }
+      }
+    },
+    "framework": {
+      "type": "string",
+      "enum": ["AICPA", "IFRS", "PCAOB"],
+      "description": "Audit framework selected for this engagement. Drives workpaper and assertion-mapping templates."
+    },
+    "industry": {
+      "type": "string",
+      "enum": [
+        "Manufacturing",
+        "SaaS",
+        "NFP",
+        "ConsumerBusiness",
+        "RealEstate"
+      ],
+      "description": "Client industry. Drives industry-specific workpaper variants and risk templates."
+    },
+    "pyAuditFile": {
+      "$ref": "#/$defs/fileReference",
+      "description": "Prior-year signed audit opinion plus accompanying issued financial statements only (not the full PY binder). PDF."
+    },
+    "cyTrialBalanceFile": {
+      "$ref": "#/$defs/fileReference",
+      "description": "Current-year trial balance. Excel (.xlsx) or CSV."
+    },
+    "cyRiskProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "narrative": {
+          "type": "string",
+          "maxLength": 10000,
+          "description": "Free-text overview of the engagement's risk profile. Optional supplement to structured items."
+        },
+        "items": {
+          "type": "array",
+          "minItems": 0,
+          "items": { "$ref": "#/$defs/riskItem" },
+          "description": "Structured list of identified risks. Each item is consumed by the assertion-risk matrix generator."
+        }
+      }
+    },
+    "cyBusinessChanges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "narrative": {
+          "type": "string",
+          "maxLength": 10000,
+          "description": "Free-text overview of significant CY business changes. Optional supplement to structured items."
+        },
+        "items": {
+          "type": "array",
+          "minItems": 0,
+          "items": { "$ref": "#/$defs/businessChangeItem" },
+          "description": "Structured list of significant changes since the prior year (management, systems, M&A, new products, etc.)."
+        }
+      }
+    },
+    "materiality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currency",
+        "overallMateriality",
+        "performanceMateriality",
+        "clearlyTrivialThreshold",
+        "basis"
+      ],
+      "properties": {
+        "currency": {
+          "type": "string",
+          "enum": ["USD"],
+          "description": "Reporting currency. v1 supports USD only; multi-currency is out of scope per PRD."
+        },
+        "overallMateriality": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Overall materiality for the engagement, in the reporting currency."
+        },
+        "performanceMateriality": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Performance materiality used to scope individual account testing."
+        },
+        "clearlyTrivialThreshold": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Threshold below which misstatements are clearly trivial and need not be accumulated."
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Plain-language description of how the three thresholds were derived (e.g., 5% of pretax income; PM = 75% of overall; CTT = 5% of PM)."
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this engagement was first captured."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of the most recent edit."
+    }
+  },
+  "$defs": {
+    "fileReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "storagePath",
+        "originalFilename",
+        "contentType",
+        "sizeBytes",
+        "uploadedAt"
+      ],
+      "properties": {
+        "storagePath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Bucket-relative path of the uploaded file in Supabase Storage."
+        },
+        "originalFilename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "contentType": {
+          "type": "string",
+          "minLength": 1,
+          "description": "MIME type as reported by the browser at upload."
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uploadedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "riskItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "description"],
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "Industry",
+            "EntitySpecific",
+            "Fraud",
+            "GoingConcern",
+            "RelatedParty",
+            "SignificantEstimate",
+            "ITGeneral",
+            "Other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      }
+    },
+    "businessChangeItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "description"],
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "ManagementChange",
+            "SystemChange",
+            "NewProductOrMarket",
+            "MergerOrAcquisition",
+            "Restructuring",
+            "SignificantContract",
+            "RegulatoryChange",
+            "Other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      }
+    }
+  }
+}
