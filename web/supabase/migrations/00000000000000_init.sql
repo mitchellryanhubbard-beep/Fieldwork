@@ -1,11 +1,25 @@
--- Fieldwork Engagement Setup — initial schema
+-- Fieldwork Engagement Setup — initial schema (idempotent).
+-- Safe to re-run: drops the four engagement tables + enums, then recreates.
 -- Tables mirror the JSON Schema at specs/engagement-setup.schema.json.
 -- RLS is enabled on every table. v1 access is server-only via service role.
 -- Auth + per-firm row policies arrive in Milestone 2 alongside per-seat licensing.
+-- Storage bucket `engagement-files` is created via scripts/ensure-bucket.mjs
+-- (Storage RLS on hosted Supabase blocks direct INSERT into storage.buckets).
 
 create extension if not exists "pgcrypto";
 
--- Enums kept in sync with the JSON Schema enums.
+-- Drop in reverse dependency order so we can re-run cleanly.
+drop table if exists engagement_files            cascade;
+drop table if exists engagement_business_changes cascade;
+drop table if exists engagement_risk_items       cascade;
+drop table if exists engagements                 cascade;
+
+drop type if exists engagement_file_kind_enum         cascade;
+drop type if exists business_change_category_enum     cascade;
+drop type if exists risk_category_enum                cascade;
+drop type if exists industry_enum                     cascade;
+drop type if exists framework_enum                    cascade;
+
 create type framework_enum as enum ('AICPA', 'IFRS', 'PCAOB');
 create type industry_enum as enum ('Manufacturing', 'SaaS', 'NFP', 'ConsumerBusiness', 'RealEstate');
 create type risk_category_enum as enum (
@@ -80,20 +94,20 @@ begin
 end;
 $$;
 
+drop trigger if exists engagements_set_updated_at on engagements;
 create trigger engagements_set_updated_at
   before update on engagements
   for each row execute function set_updated_at();
 
--- RLS — v1 is server-only via service role; lock down anon/auth roles entirely.
 alter table engagements                 enable row level security;
 alter table engagement_risk_items       enable row level security;
 alter table engagement_business_changes enable row level security;
 alter table engagement_files            enable row level security;
 
--- No policies are defined for anon/auth. Service role bypasses RLS and is the
--- only credential the server uses for v1. Add per-firm policies in M2.
+-- No policies on anon/auth — service role bypasses RLS and is the only
+-- credential the server uses in v1. Per-firm policies arrive in M2.
 
--- Storage bucket for engagement-uploaded files. Created idempotently.
-insert into storage.buckets (id, name, public)
-values ('engagement-files', 'engagement-files', false)
-on conflict (id) do nothing;
+-- Tell PostgREST to reload its schema cache so the new tables are visible
+-- to the REST API immediately (without this, callers get PGRST205 until the
+-- next scheduled poll, which can be many seconds).
+notify pgrst, 'reload schema';
