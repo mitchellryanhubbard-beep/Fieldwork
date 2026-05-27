@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EngagementForm } from "@/components/engagement-form";
 import { FileUpload } from "@/components/file-upload";
+import { GenerateBinderButton } from "@/components/generate-binder-button";
 import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -80,6 +81,10 @@ export default async function EditEngagementPage({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <GenerateBinderButton
+            engagementId={id}
+            clientName={v.clientName || "engagement"}
+          />
           <GenerateMatrixButton
             engagementId={id}
             clientName={v.clientName || "engagement"}
