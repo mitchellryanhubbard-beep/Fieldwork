@@ -201,25 +201,25 @@ function buildScopingSheet(
     for (const a of trialBalance.accounts) {
       const matrixRow = matchMatrixRow(a, matrix);
       const aboveBalanceThreshold = Math.abs(a.cyBalance) > pm;
-      // Normalize the TB's scoping column. Empty cells fall back to the
-      // matrix match (matched ⇒ Scoped In, otherwise Out of Scope).
-      const tbScoping = a.materialityScoping?.trim();
-      const scope = tbScoping
-        ? tbScoping
-        : matrixRow
-          ? "Scoped In"
-          : "Out of Scope";
-      const isScopedIn = /scoped in/i.test(scope);
+      // Normalize the TB's scoping column to a binary judgment label.
+      // The TB stores values like "Scoped In", "Below PM", or "" — we collapse
+      // anything that isn't explicitly "Scoped In" into "Scoped Out" so the
+      // column reads as a clean in/out indicator. The math nuance ("Below PM")
+      // lives in the adjacent "Above PM?" column.
+      const tbScoping = a.materialityScoping?.trim() ?? "";
+      const isScopedIn = tbScoping
+        ? /scoped in/i.test(tbScoping)
+        : matrixRow != null;
+      const scope = isScopedIn ? "Scoped In" : "Scoped Out";
       // Rationale picks the most accurate explanation we have:
       //   - matrix match → use the matrix's planned-approach rationale
       //   - scoped in per TB but no matrix row → flag for follow-up
-      //   - out of scope per TB → reference the auditor's judgment (not the
-      //     balance math, which may or may not be below PM)
+      //   - scoped out per TB → reference the auditor's judgment
       const rationale = matrixRow
         ? matrixRow.approachRationale
         : isScopedIn
           ? "Scoped per TB but no matrix row generated — confirm scoping before fieldwork."
-          : "Auditor scoped out per TB (not subject to substantive procedures).";
+          : "Scoped out per TB (auditor judgment — not subject to substantive procedures).";
       const row = sheet.addRow([
         `${a.acctNum} — ${a.name}`,
         a.section,
