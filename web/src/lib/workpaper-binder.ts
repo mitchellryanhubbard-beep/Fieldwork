@@ -179,30 +179,53 @@ function buildScopingSheet(
 
   // Account selection block.
   sectionHeader(sheet, "Account Selection");
+  sheet.addRow([
+    "TB Scoping is the auditor's judgment from the trial balance " +
+      "(not a strict balance > PM math check). Above PM is shown separately.",
+  ]).font = { italic: true, color: { argb: "FF555555" } };
+
   const header = sheet.addRow([
     "Account",
     "FSLI",
     "CY Balance",
     "PY Balance",
-    "Scope",
+    "Above PM?",
+    "TB Scoping",
     "Rationale",
   ]);
   styleTableHeader(header);
 
+  const pm = engagement.materiality.performanceMateriality;
+
   if (trialBalance) {
     for (const a of trialBalance.accounts) {
       const matrixRow = matchMatrixRow(a, matrix);
-      const inScope = matrixRow != null;
-      const scope =
-        a.materialityScoping || (inScope ? "Scoped In" : "Below PM");
+      const aboveBalanceThreshold = Math.abs(a.cyBalance) > pm;
+      // Normalize the TB's scoping column. Empty cells fall back to the
+      // matrix match (matched ⇒ Scoped In, otherwise Out of Scope).
+      const tbScoping = a.materialityScoping?.trim();
+      const scope = tbScoping
+        ? tbScoping
+        : matrixRow
+          ? "Scoped In"
+          : "Out of Scope";
+      const isScopedIn = /scoped in/i.test(scope);
+      // Rationale picks the most accurate explanation we have:
+      //   - matrix match → use the matrix's planned-approach rationale
+      //   - scoped in per TB but no matrix row → flag for follow-up
+      //   - out of scope per TB → reference the auditor's judgment (not the
+      //     balance math, which may or may not be below PM)
       const rationale = matrixRow
         ? matrixRow.approachRationale
-        : "Below performance materiality; no targeted procedures planned.";
+        : isScopedIn
+          ? "Scoped per TB but no matrix row generated — confirm scoping before fieldwork."
+          : "Auditor scoped out per TB (not subject to substantive procedures).";
       const row = sheet.addRow([
         `${a.acctNum} — ${a.name}`,
         a.section,
         a.cyBalance,
         a.pyBalance,
+        aboveBalanceThreshold ? "Yes" : "No",
         scope,
         rationale,
       ]);
@@ -210,11 +233,33 @@ function buildScopingSheet(
       row.height = Math.max(row.height ?? 0, 30);
       row.getCell(3).numFmt = USD_FMT;
       row.getCell(4).numFmt = USD_FMT;
-      const fill = scope.toLowerCase().includes("scoped in")
-        ? { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFD4EDDA" } }
-        : { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFF8F9FA" } };
-      row.getCell(5).fill = fill;
-      row.getCell(5).font = { bold: true };
+
+      // Color the "Above PM?" cell red when the math says above-PM but the
+      // auditor scoped it out — that's the contradiction worth flagging.
+      if (aboveBalanceThreshold && !isScopedIn) {
+        row.getCell(5).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFFADBD8" },
+        };
+        row.getCell(5).font = { bold: true, color: { argb: "FF8A2F2F" } };
+      } else if (aboveBalanceThreshold) {
+        row.getCell(5).font = { bold: true };
+      }
+
+      const scopeFill = isScopedIn
+        ? {
+            type: "pattern" as const,
+            pattern: "solid" as const,
+            fgColor: { argb: "FFD4EDDA" },
+          }
+        : {
+            type: "pattern" as const,
+            pattern: "solid" as const,
+            fgColor: { argb: "FFF8F9FA" },
+          };
+      row.getCell(6).fill = scopeFill;
+      row.getCell(6).font = { bold: true };
     }
   } else {
     sheet.addRow([
