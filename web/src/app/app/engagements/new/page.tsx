@@ -34,7 +34,11 @@ export default function NewEngagementPage() {
         </p>
       </header>
 
-      <EngagementForm mode="create" onSubmitAction={handleCreate} />
+      <EngagementForm
+        mode="create"
+        onSubmitAction={handleCreate}
+        startingNumber={1}
+      />
     </main>
   );
 }

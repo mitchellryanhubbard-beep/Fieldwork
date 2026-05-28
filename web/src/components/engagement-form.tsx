@@ -44,6 +44,10 @@ export type EngagementFormProps = {
   mode: "create" | "edit";
   defaultValues?: Partial<EngagementFormValues>;
   onSubmitAction: SubmitFn;
+  // First section number. Defaults to 2 because the edit page renders
+  // "Source files" as section 1 above this form. The create page (no
+  // file uploads yet) passes 1 so its numbering starts at 1.
+  startingNumber?: number;
 };
 
 const EMPTY_DEFAULTS: EngagementFormValues = {
@@ -66,7 +70,9 @@ export function EngagementForm({
   mode,
   defaultValues,
   onSubmitAction,
+  startingNumber = 2,
 }: EngagementFormProps) {
+  const n0 = startingNumber;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -106,7 +112,7 @@ export function EngagementForm({
   return (
     <form onSubmit={onSubmit} className="space-y-8">
       <NumberedSection
-        n={2}
+        n={n0}
         title="Client + Framework"
         description="Drives industry-specific templates and assertion-risk mapping downstream."
       >
@@ -181,7 +187,7 @@ export function EngagementForm({
       </NumberedSection>
 
       <NumberedSection
-        n={3}
+        n={n0 + 1}
         title="Materiality"
         description="Overall materiality, performance materiality, and the clearly trivial threshold drive scoping and exception flagging."
       >
@@ -235,7 +241,7 @@ export function EngagementForm({
       </NumberedSection>
 
       <NumberedSection
-        n={4}
+        n={n0 + 2}
         title="CY Risk Profile"
         description="Identified risks for the current year. Each item is consumed by the assertion-risk matrix."
       >
@@ -303,7 +309,7 @@ export function EngagementForm({
       </NumberedSection>
 
       <NumberedSection
-        n={5}
+        n={n0 + 3}
         title="CY Significant Business Changes"
         description="Material changes since the prior year — management, systems, M&A, new products, etc."
       >
