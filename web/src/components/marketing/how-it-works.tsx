@@ -18,7 +18,7 @@ const STEPS = [
   },
   {
     n: "04",
-    title: "Substantive + analytical testing",
+    title: "Substantive testing",
     body: "Sample selection, tickmarks, ratio + variance flagging, and an exception report you sign.",
   },
 ];
@@ -39,7 +39,7 @@ export function HowItWorks() {
               <p className="font-mono text-sm font-semibold text-accent">
                 {s.n}
               </p>
-              <h3 className="mt-3 font-display text-xl font-medium text-primary">
+              <h3 className="mt-3 whitespace-nowrap font-display text-xl font-medium tracking-tight text-primary lg:text-base">
                 {s.title}
               </h3>
               <p className="mt-2 text-sm text-foreground/70">{s.body}</p>
