@@ -30,31 +30,35 @@ function StepArrow({
   kind: "over" | "under";
   index: number;
 }) {
-  // Path is sized to the SVG viewBox below.
-  //  - "over"  arches up from a low start, peaks at the top of the box,
-  //            comes back down — i.e. crests above the card.
-  //  - "under" mirrors it — dips below the card.
+  // Wider arrow that lives ENTIRELY outside the cards — its arc body
+  // crests well above (or dips well below) the card row, only the
+  // endpoints brush close to the card edges.
+  //
+  //   "over"  arches up; start low on the left, peak high, end low on right
+  //   "under" mirrors it
   const path =
     kind === "over"
-      ? "M 6,45 Q 45,-2 78,44"
-      : "M 6,5 Q 45,52 78,6";
+      ? "M 8,82 Q 110,-12 212,82"
+      : "M 8,10 Q 110,104 212,10";
   const markerId = `fw-arrow-head-${kind}-${index}`;
-  // The "over" arrow sits with its body above the card, so we pin it
-  // to the top edge and translate UP just past the card border. The
-  // "under" arrow mirrors that at the bottom. Right offset extends
-  // half the arrow into the gap so it visually spans both cards.
+  // Center the arrow horizontally on the gap between this card and
+  // the next. The arrow span is 220px; pulling right back by half its
+  // own width centers it on the card's right edge (the gap midpoint
+  // sits a few px right of that, close enough to look balanced).
+  // Vertically: "over" pinned at the top edge then translated up so
+  // the arc body is well above the card; "under" mirrors.
   const positionClass =
     kind === "over"
-      ? "-top-6 -right-12"
-      : "-bottom-6 -right-12";
+      ? "-top-20 -right-[110px]"
+      : "-bottom-20 -right-[110px]";
   return (
     <span
       aria-hidden="true"
       className={`pointer-events-none absolute z-10 hidden lg:block ${positionClass}`}
-      style={{ width: "84px", height: "52px" }}
+      style={{ width: "220px", height: "92px" }}
     >
       <svg
-        viewBox="0 0 84 52"
+        viewBox="0 0 220 92"
         className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
         style={{ overflow: "visible" }}
       >
@@ -75,7 +79,7 @@ function StepArrow({
           d={path}
           fill="none"
           stroke="currentColor"
-          strokeWidth={3}
+          strokeWidth={3.5}
           strokeLinecap="round"
           markerEnd={`url(#${markerId})`}
         />
