@@ -9,7 +9,7 @@ const STEPS = [
   {
     n: "02",
     title: "Assertion-Risk Matrix",
-    body: "AI maps every significant account to risks, assertions, and a planned approach. You review.",
+    body: "AI maps every significant account to risks, assertions, and a planned approach.",
   },
   {
     n: "03",
