@@ -3,7 +3,13 @@ import { buttonVariants } from "@/components/ui/button";
 
 export function Hero() {
   return (
-    <section className="bg-secondary pb-20 pt-16 sm:pt-24">
+    <section
+      style={{
+        backgroundColor:
+          "color-mix(in oklab, var(--color-fw-cream-deep) 70%, var(--color-fw-navy) 12%)",
+      }}
+      className="pb-20 pt-16 sm:pt-24"
+    >
       <div className="mx-auto w-full max-w-6xl px-6">
         <h1 className="max-w-3xl font-display text-5xl font-medium leading-[1.05] tracking-tight text-primary sm:text-6xl">
           Audit fieldwork that lives inside Excel.
