@@ -9,7 +9,7 @@ export function Hero() {
     >
       <div className="mx-auto w-full max-w-6xl px-6">
         <h1 className="max-w-3xl font-display text-5xl font-medium leading-[1.05] tracking-tight text-primary sm:text-6xl">
-          Audit fieldwork that lives inside Excel.
+          First-pass audit fieldwork that lives in Excel.
         </h1>
         <p className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-accent">
           First Pass on Autopilot
