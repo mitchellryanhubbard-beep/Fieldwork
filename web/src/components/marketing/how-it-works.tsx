@@ -25,7 +25,14 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section id="product" className="bg-secondary/40 py-20">
+    <section
+      id="product"
+      style={{
+        backgroundColor:
+          "color-mix(in oklab, var(--color-fw-cream-deep) 70%, var(--color-fw-navy) 12%)",
+      }}
+      className="py-20"
+    >
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionHeading>
           From engagement setup to signed exception report.
