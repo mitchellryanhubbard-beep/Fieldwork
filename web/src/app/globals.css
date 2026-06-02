@@ -9,10 +9,11 @@
   --color-fw-gold-soft: #d9b870;
   --color-fw-cream: #ede5d3;
   --color-fw-cream-deep: #e3d9c2;
-  /* Band — a soft step down from the body cream, used by alternating
-     marketing sections to give them their own surface without
-     overwhelming contrast. One token so every band stays in sync. */
-  --color-fw-band: #dfd4ba;
+  /* Band — same hue as the body cream, just ~12% darker on each
+     channel so the section reads as the same color family, just a
+     few shades deeper. One token; every banded marketing section
+     stays in sync. */
+  --color-fw-band: #d9d1bf;
   --color-fw-ink: #11202e;
   --color-fw-snow: #ffffff;
   --color-fw-crimson: #8a2f2f;
