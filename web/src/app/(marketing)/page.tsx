@@ -1,5 +1,4 @@
 import { Hero } from "@/components/marketing/hero";
-import { TrustBand } from "@/components/marketing/trust-band";
 import { ProblemBlock } from "@/components/marketing/problem-block";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { ProductVisual } from "@/components/marketing/product-visual";
@@ -11,7 +10,6 @@ export default function MarketingHome() {
   return (
     <main>
       <Hero />
-      <TrustBand />
       <ProblemBlock />
       <HowItWorks />
       <ProductVisual />
