@@ -37,24 +37,23 @@ function StepArrow({
   //
   //   "over"  starts low on the left, peaks high above, ends low on right
   //   "under" mirrors it — endpoints near the top, dip below
+  // Subtler arc — crest sits about 60px above (or below) the endpoint
+  // line rather than the previous 112px, so the arrow reads as a gentle
+  // curve instead of a tall arch.
   const path =
     kind === "over"
-      ? "M 15,90 Q 140,-22 265,90"
-      : "M 15,10 Q 140,122 265,10";
+      ? "M 15,82 Q 140,22 265,82"
+      : "M 15,18 Q 140,78 265,18";
   const markerId = `fw-arrow-head-${kind}-${index}`;
-  // Position the 280px-wide arrow so it stretches from the centre of
-  // this card to the centre of the next: right edge anchored 148px
-  // past the card's right edge so 132px of the arrow sits over THIS
-  // card and 148px extends into the gap + next card.
   const positionClass =
     kind === "over"
-      ? "-top-[88px] -right-[148px]"
-      : "-bottom-[88px] -right-[148px]";
+      ? "-top-[60px] -right-[148px]"
+      : "-bottom-[60px] -right-[148px]";
   return (
     <span
       aria-hidden="true"
       className={`pointer-events-none absolute z-10 hidden lg:block ${positionClass}`}
-      style={{ width: "280px", height: "100px" }}
+      style={{ width: "280px", height: "92px" }}
     >
       <svg
         viewBox="0 0 280 100"
@@ -62,23 +61,33 @@ function StepArrow({
         style={{ overflow: "visible" }}
       >
         <defs>
+          {/* Open chevron arrowhead — two strokes meeting at the tip
+              rather than a filled triangle, so the head reads as a
+              hand-drawn arrow rather than a glyph. */}
           <marker
             id={markerId}
             viewBox="0 0 10 10"
             refX="8"
             refY="5"
-            markerWidth="6"
-            markerHeight="6"
+            markerWidth="7"
+            markerHeight="7"
             orient="auto-start-reverse"
           >
-            <path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor" />
+            <path
+              d="M 1 1 L 9 5 L 1 9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </marker>
         </defs>
         <path
           d={path}
           fill="none"
           stroke="currentColor"
-          strokeWidth={4}
+          strokeWidth={3.5}
           strokeLinecap="round"
           markerEnd={`url(#${markerId})`}
         />
