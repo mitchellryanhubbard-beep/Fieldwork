@@ -24,7 +24,7 @@ export function SiteFooter() {
         <FooterCol
           title="Company"
           links={[
-            { label: "About", href: "#" },
+            { label: "About", href: "/about" },
             { label: "Careers", href: "#" },
             { label: "Press", href: "#" },
           ]}
