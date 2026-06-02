@@ -5,9 +5,6 @@ export function TrustBand() {
         <p className="text-sm font-medium text-primary">
           Built for AICPA, IFRS, and PCAOB engagements.
         </p>
-        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/50">
-          Mid-tier firm logos coming as beta partners onboard.
-        </p>
       </div>
     </section>
   );
