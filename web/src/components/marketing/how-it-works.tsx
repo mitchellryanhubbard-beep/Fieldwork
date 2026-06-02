@@ -27,10 +27,7 @@ export function HowItWorks() {
   return (
     <section
       id="product"
-      style={{
-        backgroundColor:
-          "color-mix(in oklab, var(--color-fw-cream-deep) 70%, var(--color-fw-navy) 12%)",
-      }}
+      style={{ backgroundColor: "var(--color-fw-band)" }}
       className="py-20"
     >
       <div className="mx-auto w-full max-w-6xl px-6">

@@ -9,6 +9,10 @@
   --color-fw-gold-soft: #d9b870;
   --color-fw-cream: #ede5d3;
   --color-fw-cream-deep: #e3d9c2;
+  /* Band — a clearly darker warm tan, used by alternating marketing
+     sections to break up the body cream. One token so every band
+     stays in sync. */
+  --color-fw-band: #d6c8a0;
   --color-fw-ink: #11202e;
   --color-fw-snow: #ffffff;
   --color-fw-crimson: #8a2f2f;
