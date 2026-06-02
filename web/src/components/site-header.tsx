@@ -39,13 +39,13 @@ export async function SiteHeader({ variant }: SiteHeaderProps) {
 
         {variant === "marketing" ? (
           <nav className="flex items-center gap-6 text-sm text-primary">
-            <Link href="#product" className="hover:underline">
+            <Link href="/#product" className="hover:underline">
               Product
             </Link>
-            <Link href="#pricing" className="hover:underline">
+            <Link href="/#pricing" className="hover:underline">
               Pricing
             </Link>
-            <Link href="#trust" className="hover:underline">
+            <Link href="/#trust" className="hover:underline">
               Trust
             </Link>
             <Link href="/app" className="hover:underline">

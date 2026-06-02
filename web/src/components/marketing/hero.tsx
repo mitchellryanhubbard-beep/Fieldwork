@@ -19,7 +19,7 @@ export function Hero() {
             Start free trial
           </Link>
           <Link
-            href="#cta"
+            href="/#cta"
             className={buttonVariants({ variant: "navyOutline", size: "lg" })}
           >
             Book a demo
