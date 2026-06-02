@@ -32,7 +32,7 @@ export function HowItWorks() {
     >
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionHeading>
-          From engagement setup to signed exception report.
+          From engagement setup to substantive testing.
         </SectionHeading>
         <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s) => (
