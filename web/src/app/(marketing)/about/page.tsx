@@ -46,7 +46,7 @@ export default function AboutPage() {
 
           {/* Pull quote / break */}
           <p className="border-l-4 border-accent pl-5 font-display text-2xl font-medium leading-snug text-primary sm:text-3xl">
-            First-Pass was built to resolve the issues plaguing current audit
+            First-Pass was built to resolve the issues plaguing audit
             engagements.
           </p>
 
