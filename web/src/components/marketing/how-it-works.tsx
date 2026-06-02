@@ -38,7 +38,7 @@ export function HowItWorks() {
           {STEPS.map((s, i) => (
             <li
               key={s.n}
-              className="group relative rounded-xl border border-primary/10 bg-card p-6"
+              className="group relative rounded-xl border border-primary/10 bg-card p-6 transition-colors duration-200 hover:bg-[#f5f0e2]"
             >
               <p className="font-mono text-sm font-semibold text-accent">
                 {s.n}
