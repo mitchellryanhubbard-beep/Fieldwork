@@ -24,9 +24,6 @@ export function Hero() {
           Book a demo
         </Link>
       </div>
-      <p className="mt-10 text-xs font-semibold uppercase tracking-[0.18em] text-primary/60">
-        AICPA &middot; IFRS &middot; PCAOB
-      </p>
     </section>
   );
 }
