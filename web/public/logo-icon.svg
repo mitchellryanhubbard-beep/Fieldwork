@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="first-pass.io">
+  <defs>
+    <clipPath id="circle-clip">
+      <circle cx="50" cy="50" r="49.5" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#circle-clip)">
+    <!-- 5×5 grid of rounded squares, navy by default; bottom-right 2×2 gold. -->
+    <!-- Row 1 -->
+    <rect x="1"  y="1"  width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="21" y="1"  width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="41" y="1"  width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="61" y="1"  width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="81" y="1"  width="17" height="17" rx="3" fill="#1d3a52" />
+    <!-- Row 2 -->
+    <rect x="1"  y="21" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="21" y="21" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="41" y="21" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="61" y="21" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="81" y="21" width="17" height="17" rx="3" fill="#1d3a52" />
+    <!-- Row 3 -->
+    <rect x="1"  y="41" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="21" y="41" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="41" y="41" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="61" y="41" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="81" y="41" width="17" height="17" rx="3" fill="#1d3a52" />
+    <!-- Row 4 -->
+    <rect x="1"  y="61" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="21" y="61" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="41" y="61" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="61" y="61" width="17" height="17" rx="3" fill="#c8a04a" />
+    <rect x="81" y="61" width="17" height="17" rx="3" fill="#c8a04a" />
+    <!-- Row 5 -->
+    <rect x="1"  y="81" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="21" y="81" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="41" y="81" width="17" height="17" rx="3" fill="#1d3a52" />
+    <rect x="61" y="81" width="17" height="17" rx="3" fill="#c8a04a" />
+    <rect x="81" y="81" width="17" height="17" rx="3" fill="#c8a04a" />
+  </g>
+</svg>

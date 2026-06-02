@@ -24,9 +24,17 @@ export async function SiteHeader({ variant }: SiteHeaderProps) {
             "Engagements" link to get back to /app from within the app. */}
         <Link
           href="/"
-          className="font-display text-xl font-semibold tracking-tight text-primary"
+          className="flex items-center gap-2.5 font-display text-lg font-semibold tracking-tight text-primary"
         >
-          FIELDWORK
+          <img
+            src="/logo-icon.svg"
+            alt=""
+            aria-hidden="true"
+            className="size-7"
+          />
+          <span>
+            FIRST-PASS<span className="text-accent">.IO</span>
+          </span>
         </Link>
 
         {variant === "marketing" ? (
