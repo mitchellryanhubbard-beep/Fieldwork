@@ -19,7 +19,7 @@ const STEPS = [
   {
     n: "04",
     title: "Substantive testing",
-    body: "Sample selection, tickmarks, ratio + variance flagging, and an exception report you sign.",
+    body: "Sample selections, testing procedures, tickmarks, and ratio + variance flagging.",
   },
 ];
 
