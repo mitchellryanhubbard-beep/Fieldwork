@@ -23,6 +23,67 @@ const STEPS = [
   },
 ];
 
+function StepArrow({
+  kind,
+  index,
+}: {
+  kind: "over" | "under";
+  index: number;
+}) {
+  // Path is sized to the SVG viewBox below.
+  //  - "over"  arches up from a low start, peaks at the top of the box,
+  //            comes back down — i.e. crests above the card.
+  //  - "under" mirrors it — dips below the card.
+  const path =
+    kind === "over"
+      ? "M 6,45 Q 45,-2 78,44"
+      : "M 6,5 Q 45,52 78,6";
+  const markerId = `fw-arrow-head-${kind}-${index}`;
+  // The "over" arrow sits with its body above the card, so we pin it
+  // to the top edge and translate UP just past the card border. The
+  // "under" arrow mirrors that at the bottom. Right offset extends
+  // half the arrow into the gap so it visually spans both cards.
+  const positionClass =
+    kind === "over"
+      ? "-top-6 -right-12"
+      : "-bottom-6 -right-12";
+  return (
+    <span
+      aria-hidden="true"
+      className={`pointer-events-none absolute z-10 hidden lg:block ${positionClass}`}
+      style={{ width: "84px", height: "52px" }}
+    >
+      <svg
+        viewBox="0 0 84 52"
+        className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
+        style={{ overflow: "visible" }}
+      >
+        <defs>
+          <marker
+            id={markerId}
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor" />
+          </marker>
+        </defs>
+        <path
+          d={path}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={3}
+          strokeLinecap="round"
+          markerEnd={`url(#${markerId})`}
+        />
+      </svg>
+    </span>
+  );
+}
+
 export function HowItWorks() {
   return (
     <section
@@ -48,37 +109,21 @@ export function HowItWorks() {
               </h3>
               <p className="mt-2 text-sm text-foreground/70">{s.body}</p>
 
-              {/* Animated arrow that points to the next step on hover.
-                  Renders only when there IS a next step, only at the
-                  lg breakpoint where the cards sit side-by-side. */}
-              {i < STEPS.length - 1 ? (
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -right-5 top-1/2 hidden -translate-y-1/2 lg:block"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2.75}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="size-9 -translate-x-3 text-accent opacity-0 drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-hover:[animation:fw-arrow-bounce_0.9s_ease-in-out_infinite]"
-                  >
-                    <path d="M5 12h14" />
-                    <path d="M13 5l7 7-7 7" />
-                  </svg>
-                </span>
-              ) : null}
+              {/* Arched arrows between adjacent steps. Alternating
+                  curve direction (over → under → over) so the eye
+                  weaves down-up-down across the row when scanning. Path
+                  is drawn left→right with a marker-end arrowhead so the
+                  tip auto-orients to the curve's tangent. */}
+              {i < STEPS.length - 1 ? <StepArrow kind={i % 2 === 0 ? "over" : "under"} index={i} /> : null}
             </li>
           ))}
         </ol>
-        {/* Custom keyframe used by the hover arrow above. Scoped to
+        {/* Custom keyframe used by the hover arrow path. Scoped to
             this section via a style tag so it travels with the component. */}
         <style>{`
           @keyframes fw-arrow-bounce {
             0%, 100% { transform: translateX(0); }
-            50%      { transform: translateX(6px); }
+            50%      { transform: translateX(5px); }
           }
         `}</style>
       </div>
