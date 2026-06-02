@@ -59,8 +59,8 @@ export default function AboutPage() {
             review.
           </p>
 
-          {/* Italic emphasis */}
-          <p className="text-xl italic leading-snug text-primary/90 sm:text-2xl">
+          {/* Pull quote — matches the "First-Pass was built…" callout */}
+          <p className="border-l-4 border-accent pl-5 font-display text-2xl font-medium leading-snug text-primary sm:text-3xl">
             We don&rsquo;t replace professional judgment. We accelerate
             everything that comes before it.
           </p>
