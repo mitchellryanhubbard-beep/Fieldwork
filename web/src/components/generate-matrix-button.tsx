@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { GeneratedArtifactHistory } from "@/components/generated-artifact-history";
 
 export type GenerateMatrixButtonProps = {
   engagementId: string;
@@ -14,6 +15,7 @@ export function GenerateMatrixButton({
   clientName,
 }: GenerateMatrixButtonProps) {
   const [isPending, setIsPending] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
 
   async function handleClick() {
     if (isPending) return;
@@ -51,6 +53,7 @@ export function GenerateMatrixButton({
         id: toastId,
         description: "Open the xlsx in Excel to review.",
       });
+      setHistoryKey((k) => k + 1);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       toast.error("Matrix generation failed", {
@@ -63,13 +66,21 @@ export function GenerateMatrixButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="gold"
-      onClick={handleClick}
-      disabled={isPending}
-    >
-      {isPending ? "Generating… (60-90s)" : "Generate Assertion Matrix"}
-    </Button>
+    <div className="flex flex-col">
+      <Button
+        type="button"
+        variant="gold"
+        onClick={handleClick}
+        disabled={isPending}
+      >
+        {isPending ? "Generating… (60-90s)" : "Generate Assertion Matrix"}
+      </Button>
+      <GeneratedArtifactHistory
+        engagementId={engagementId}
+        kind="matrix"
+        refreshKey={historyKey}
+        label="Prior matrices:"
+      />
+    </div>
   );
 }

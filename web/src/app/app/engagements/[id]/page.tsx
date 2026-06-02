@@ -5,8 +5,20 @@ import { FileUpload } from "@/components/file-upload";
 import { GenerateBinderButton } from "@/components/generate-binder-button";
 import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
+import { WorkpapersSection } from "@/components/workpapers-section";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
+import { listScopedAccountsForWorkpapers } from "@/lib/account-workpaper-listing";
+import { listGeneratedWorkpaperAcctNums } from "@/lib/account-workpaper-generator";
+import { listGeneratedConfirmationAcctNums } from "@/lib/confirmation-requests-generator";
+import { listPyWorkpapers, type PyWorkpaper } from "@/lib/py-workpaper-repo";
+import { findFsli } from "@/lib/workpaper-binder";
+import { loadVerification, type VerificationRecord } from "@/lib/intake/storage";
+import {
+  KIND_LABELS,
+  PARSEABLE_KINDS,
+  type ParseableKind,
+} from "@/lib/intake/canonical";
 import { getEngagement } from "@/lib/engagement-repo";
 import type { EngagementFormValues } from "@/lib/engagement-schema";
 import {
@@ -37,6 +49,51 @@ export default async function EditEngagementPage({
   const { id } = await params;
   const detail = await getEngagement(id);
   if (!detail) notFound();
+
+  const [
+    arAccounts,
+    generatedAcctNums,
+    generatedConfirmationAcctNums,
+    verifications,
+    pyWorkpapers,
+  ] = await Promise.all([
+    listScopedAccountsForWorkpapers(id),
+    listGeneratedWorkpaperAcctNums(id),
+    listGeneratedConfirmationAcctNums(id),
+    Promise.all(
+      PARSEABLE_KINDS.map(async (k) => [k, await loadVerification(id, k)] as const),
+    ).then((entries) => Object.fromEntries(entries)),
+    listPyWorkpapers(id),
+  ]);
+
+  // Group PY workpapers by FSLI so each scoped account can show its
+  // matching set under the collapsible. Each account's FSLI comes from
+  // findFsli on the acctNum — see workpaper-binder.ts.
+  const pyWorkpapersByFsli: Record<string, PyWorkpaper[]> = {};
+  for (const py of pyWorkpapers) {
+    if (!py.fsli) continue;
+    (pyWorkpapersByFsli[py.fsli] ??= []).push(py);
+  }
+  const fsliByAcctNum: Record<string, string> = {};
+  for (const a of arAccounts) {
+    fsliByAcctNum[a.acctNum] = findFsli(a.acctNum, a.name);
+  }
+
+  // Verification gate — build a friendly "blocking" reason per generator
+  // so the buttons can disable + show a tooltip when an upload is pending
+  // or failed. Server-side enforcement (requireUploadsConfirmed) is the
+  // source of truth; this just keeps the UI honest about why a button is
+  // grey.
+  const binderBlocker = blockingReason(verifications, ["cy_tb"]);
+  const workpaperBlocker = blockingReason(verifications, [
+    "cy_tb",
+    "ar_aging",
+    "subsequent_cash_receipts",
+  ]);
+  const confirmationsBlocker = blockingReason(verifications, [
+    "cy_tb",
+    "ar_aging",
+  ]);
 
   async function handleUpdate({ values }: { values: EngagementFormValues }) {
     "use server";
@@ -84,6 +141,7 @@ export default async function EditEngagementPage({
           <GenerateBinderButton
             engagementId={id}
             clientName={v.clientName || "engagement"}
+            generationBlockedReason={binderBlocker}
           />
           <GenerateMatrixButton
             engagementId={id}
@@ -104,10 +162,17 @@ export default async function EditEngagementPage({
       </header>
 
       <div className="space-y-12">
+        <EngagementForm
+          mode="edit"
+          defaultValues={detail.values}
+          onSubmitAction={handleUpdate}
+          startingNumber={1}
+        />
+
         <NumberedSection
-          n={1}
+          n={5}
           title="Source files"
-          description="Prior-year signed audit opinion (PDF) and current-year trial balance (Excel or CSV). Replacing an upload removes the prior file from storage."
+          description="Prior-year signed audit opinion (PDF) and current-year trial balance (Excel, CSV, or PDF). Replacing an upload removes the prior file from storage."
         >
           <div className="space-y-4">
             <FileUpload
@@ -121,20 +186,91 @@ export default async function EditEngagementPage({
             <FileUpload
               engagementId={id}
               kind="cy_tb"
-              title="CY Trial Balance (Excel or CSV)"
-              description="Current-year trial balance as exported from the client's GL."
-              accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+              title="CY Trial Balance (Excel, CSV, or PDF)"
+              description="Current-year trial balance as exported from the client's GL. We'll extract the structured data on upload."
+              accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
               current={detail.cyTrialBalanceFile}
+              verification={verifications.cy_tb}
             />
           </div>
         </NumberedSection>
 
-        <EngagementForm
-          mode="edit"
-          defaultValues={detail.values}
-          onSubmitAction={handleUpdate}
-        />
+        <NumberedSection
+          n={6}
+          title="Supporting Schedules"
+          description="Client-provided supporting schedules used during fieldwork — agings, listings, rolls, and confirmations. Each FSLI brings its own set as we add coverage."
+        >
+          <div className="space-y-4">
+            <FileUpload
+              engagementId={id}
+              kind="ar_aging"
+              title="AR Aging — by Customer + Invoice"
+              description="Open AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data on upload."
+              accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
+              current={detail.arAgingFile}
+              verification={verifications.ar_aging}
+            />
+            <FileUpload
+              engagementId={id}
+              kind="subsequent_cash_receipts"
+              title="Subsequent Cash Receipts"
+              description="Cash receipts collected after the balance-sheet date, applied against pre-YE invoices. Powers the Existence + Valuation substantive test (receipt-to-invoice matching, % collected within 30/60 days, aged-uncollected flagging)."
+              accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
+              current={detail.subsequentCashReceiptsFile}
+              verification={verifications.subsequent_cash_receipts}
+            />
+          </div>
+        </NumberedSection>
+
+        <NumberedSection
+          n={7}
+          title="Workpapers"
+          description="PY files can be uploaded for reference or rolled forward into the CY pane."
+        >
+          <WorkpapersSection
+            engagementId={id}
+            accounts={arAccounts}
+            generatedAcctNums={Array.from(generatedAcctNums)}
+            generatedConfirmationAcctNums={Array.from(
+              generatedConfirmationAcctNums,
+            )}
+            hasArAging={
+              !!detail.arAgingFile && detail.arAgingFile.sizeBytes > 0
+            }
+            hasTrialBalance={
+              !!detail.cyTrialBalanceFile &&
+              detail.cyTrialBalanceFile.sizeBytes > 0
+            }
+            pyWorkpapers={pyWorkpapers}
+            pyWorkpapersByFsli={pyWorkpapersByFsli}
+            fsliByAcctNum={fsliByAcctNum}
+            workpaperBlockedReason={workpaperBlocker}
+            confirmationsBlockedReason={confirmationsBlocker}
+          />
+        </NumberedSection>
       </div>
     </main>
   );
+}
+
+// Builds a short, user-facing reason a generator is blocked, mirroring the
+// requireUploadsConfirmed server-side enforcement. Returns undefined when
+// every required upload is either absent (silent degrade) or confirmed.
+function blockingReason(
+  verifications: Partial<Record<ParseableKind, VerificationRecord | null>>,
+  requiredKinds: ParseableKind[],
+): string | undefined {
+  const blockers: string[] = [];
+  for (const kind of requiredKinds) {
+    const v = verifications[kind];
+    if (!v) continue; // no upload, generator degrades silently
+    if (v.status === "confirmed") continue;
+    if (v.status === "pending") {
+      blockers.push(`${KIND_LABELS[kind]}: confirm on Verify page`);
+    } else if (v.status === "failed") {
+      blockers.push(`${KIND_LABELS[kind]}: parse failed, use manual mapping`);
+    }
+  }
+  if (blockers.length === 0) return undefined;
+  return `Blocked — ${blockers.join(" · ")}`;
 }

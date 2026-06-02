@@ -9,11 +9,8 @@ import {
   ASSERTION_MATRIX_SYSTEM_PROMPT,
   buildAssertionMatrixUserMessage,
 } from "@/lib/assertion-matrix-prompt";
-import { parseTrialBalance, type TrialBalance } from "@/lib/tb-parser";
-import {
-  ENGAGEMENT_FILES_BUCKET,
-  getServerSupabase,
-} from "@/lib/supabase/server";
+import type { TrialBalance } from "@/lib/tb-parser";
+import { loadTrialBalanceForEngagement } from "@/lib/intake/load-canonical";
 
 export type MatrixGenerationResult = {
   matrix: AssertionMatrix;
@@ -35,24 +32,18 @@ export async function generateAssertionMatrix(
 ): Promise<MatrixGenerationResult> {
   const engagement = await exportEngagement(engagementId);
 
-  // Best-effort TB parse — fall back to engagement-setup-only prompt path
-  // if the file is missing or unparseable. Surface the error on the response
-  // so the caller can flag it.
+  // Best-effort canonical-TB load — falls back to engagement-setup-only
+  // prompt path if not parsed. Surface a hint on the response so the
+  // caller can flag the gap.
   let trialBalance: TrialBalance | undefined;
   let tbParseError: string | null = null;
   if (engagement.cyTrialBalanceFile.sizeBytes > 0) {
-    try {
-      const sb = getServerSupabase();
-      const { data, error } = await sb.storage
-        .from(ENGAGEMENT_FILES_BUCKET)
-        .download(engagement.cyTrialBalanceFile.storagePath);
-      if (error || !data) {
-        throw new Error(`storage download: ${error?.message ?? "no data"}`);
-      }
-      const buffer = Buffer.from(await data.arrayBuffer());
-      trialBalance = await parseTrialBalance(buffer);
-    } catch (err) {
-      tbParseError = err instanceof Error ? err.message : String(err);
+    const loaded = await loadTrialBalanceForEngagement(engagementId);
+    if (loaded) {
+      trialBalance = loaded;
+    } else {
+      tbParseError =
+        "TB not available — confirm the upload on the Verify page or re-upload.";
     }
   }
 

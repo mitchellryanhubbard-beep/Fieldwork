@@ -3,17 +3,21 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { GeneratedArtifactHistory } from "@/components/generated-artifact-history";
 
 export type GenerateBinderButtonProps = {
   engagementId: string;
   clientName: string;
+  generationBlockedReason?: string;
 };
 
 export function GenerateBinderButton({
   engagementId,
   clientName,
+  generationBlockedReason,
 }: GenerateBinderButtonProps) {
   const [isPending, setIsPending] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
 
   async function handleClick() {
     if (isPending) return;
@@ -54,6 +58,7 @@ export function GenerateBinderButton({
         id: toastId,
         description: "Open in Excel to review the scoping memo + lead sheets.",
       });
+      setHistoryKey((k) => k + 1);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       toast.error("Binder generation failed", {
@@ -66,13 +71,22 @@ export function GenerateBinderButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="gold"
-      onClick={handleClick}
-      disabled={isPending}
-    >
-      {isPending ? "Building binder… (60-90s)" : "Generate Workpaper Binder"}
-    </Button>
+    <div className="flex flex-col">
+      <Button
+        type="button"
+        variant="gold"
+        onClick={handleClick}
+        disabled={isPending || !!generationBlockedReason}
+        title={generationBlockedReason}
+      >
+        {isPending ? "Building binder… (60-90s)" : "Generate Workpaper Binder"}
+      </Button>
+      <GeneratedArtifactHistory
+        engagementId={engagementId}
+        kind="binder"
+        refreshKey={historyKey}
+        label="Prior binders:"
+      />
+    </div>
   );
 }

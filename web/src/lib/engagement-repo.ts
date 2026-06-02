@@ -3,6 +3,7 @@ import {
   ENGAGEMENT_FILES_BUCKET,
   getServerSupabase,
 } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/ssr";
 import {
   EngagementSetupSchema,
   type EngagementSetup,
@@ -11,7 +12,19 @@ import {
 
 const SCHEMA_VERSION = "1.0.0" as const;
 
-type FileKind = "py_audit" | "cy_tb";
+type FileKind = "py_audit" | "cy_tb" | "ar_aging" | "subsequent_cash_receipts";
+
+// py_audit is stored as evidence but isn't routed through the intake
+// dispatcher (we don't extract structured data from the signed opinion).
+function isParseableKind(
+  kind: FileKind,
+): kind is "ar_aging" | "cy_tb" | "subsequent_cash_receipts" {
+  return (
+    kind === "ar_aging" ||
+    kind === "cy_tb" ||
+    kind === "subsequent_cash_receipts"
+  );
+}
 
 export type EngagementSummary = {
   id: string;
@@ -24,11 +37,14 @@ export type EngagementSummary = {
 
 export async function listEngagements(): Promise<EngagementSummary[]> {
   const sb = getServerSupabase();
+  const user = await getCurrentUser();
+  if (!user) return [];
   const { data, error } = await sb
     .from("engagements")
     .select(
       "id, client_name, fiscal_year_end, framework, industry, updated_at",
     )
+    .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error(`listEngagements failed: ${error.message}`);
@@ -47,10 +63,13 @@ export async function createEngagement(
   values: EngagementFormValues,
 ): Promise<string> {
   const sb = getServerSupabase();
+  const user = await getCurrentUser();
+  if (!user) throw new Error("createEngagement: not signed in");
   const id = randomUUID();
 
   const { error: insertError } = await sb.from("engagements").insert({
     id,
+    owner_id: user.id,
     client_name: values.clientName,
     fiscal_year_end: values.fiscalYearEnd,
     reporting_period_start: values.reportingPeriodStart || null,
@@ -156,6 +175,8 @@ export type EngagementDetail = {
   values: EngagementFormValues;
   pyAuditFile: FileMeta | null;
   cyTrialBalanceFile: FileMeta | null;
+  arAgingFile: FileMeta | null;
+  subsequentCashReceiptsFile: FileMeta | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -170,10 +191,13 @@ export type FileMeta = {
 
 export async function getEngagement(id: string): Promise<EngagementDetail | null> {
   const sb = getServerSupabase();
+  const user = await getCurrentUser();
+  if (!user) return null;
   const { data: engagement, error } = await sb
     .from("engagements")
     .select("*")
     .eq("id", id)
+    .eq("owner_id", user.id)
     .maybeSingle();
   if (error) throw new Error(`getEngagement failed: ${error.message}`);
   if (!engagement) return null;
@@ -240,6 +264,9 @@ export async function getEngagement(id: string): Promise<EngagementDetail | null
     values,
     pyAuditFile: fileByKind.get("py_audit") ?? null,
     cyTrialBalanceFile: fileByKind.get("cy_tb") ?? null,
+    arAgingFile: fileByKind.get("ar_aging") ?? null,
+    subsequentCashReceiptsFile:
+      fileByKind.get("subsequent_cash_receipts") ?? null,
     createdAt: engagement.created_at,
     updatedAt: engagement.updated_at,
   };
@@ -252,6 +279,8 @@ export async function deleteEngagement(id: string): Promise<void> {
     const pathsToRemove = [
       detail.pyAuditFile?.storagePath,
       detail.cyTrialBalanceFile?.storagePath,
+      detail.arAgingFile?.storagePath,
+      detail.subsequentCashReceiptsFile?.storagePath,
     ].filter((p): p is string => !!p);
     if (pathsToRemove.length > 0) {
       await sb.storage.from(ENGAGEMENT_FILES_BUCKET).remove(pathsToRemove);
@@ -270,6 +299,7 @@ export async function uploadEngagementFile(
   const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
   const storagePath = `engagements/${engagementId}/${kind}-${Date.now()}-${safeName}`;
   const arrayBuffer = await file.arrayBuffer();
+  const bytes = Buffer.from(arrayBuffer);
 
   const { error: uploadError } = await sb.storage
     .from(ENGAGEMENT_FILES_BUCKET)
@@ -312,6 +342,25 @@ export async function uploadEngagementFile(
       size_bytes: file.size,
     });
     if (insertError) throw new Error(`uploadEngagementFile insert failed: ${insertError.message}`);
+  }
+
+  // Intake: for parseable kinds (ar_aging, cy_tb, subsequent_cash_receipts)
+  // we eagerly extract the canonical shape on upload, cache the JSON
+  // alongside the original, and mark verification as pending. Replaces any
+  // prior parse/verification sidecars so the auditor sees a fresh state.
+  if (isParseableKind(kind)) {
+    const { runIntakeOnUpload } = await import("@/lib/intake/dispatch");
+    const { deleteParseSidecar } = await import("@/lib/intake/storage");
+    await deleteParseSidecar(engagementId, kind);
+    // Don't throw on parse failure — the verification record is written
+    // either way, and the UI surfaces the failure path (manual mapping).
+    await runIntakeOnUpload({
+      engagementId,
+      kind,
+      originalFilename: file.name,
+      mime: file.type || null,
+      bytes,
+    });
   }
 
   return {

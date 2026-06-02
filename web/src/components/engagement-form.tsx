@@ -114,7 +114,7 @@ export function EngagementForm({
       <NumberedSection
         n={n0}
         title="Client + Framework"
-        description="Drives industry-specific templates and assertion-risk mapping downstream."
+        description="Client, fiscal year end, framework, and industry. Drives industry-specific templates and assertion-risk mapping downstream."
       >
         <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-2">
           <Field
@@ -189,7 +189,7 @@ export function EngagementForm({
       <NumberedSection
         n={n0 + 1}
         title="Materiality"
-        description="Overall materiality, performance materiality, and the clearly trivial threshold drive scoping and exception flagging."
+        description="Drives scoping, sample sizes, and exception flagging across every downstream test."
       >
         <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-3">
           <Field

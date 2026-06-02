@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { autosizeAllSheets } from "@/lib/excel-autosize";
 import type { EngagementSetup } from "@/lib/engagement-schema";
 import {
   FRAMEWORK_LABELS,
@@ -12,37 +13,230 @@ import {
 } from "@/lib/assertion-matrix";
 import type { TrialBalance, TrialBalanceAccount } from "@/lib/tb-parser";
 
-// FSLI groupings — used to consolidate TB accounts into lead sheets.
-// `prefix` is the account-number prefix. `relatedPrefixes` are siblings that
-// roll into the same lead sheet (e.g. PP&E gross + Accumulated Depreciation).
+// FSLI categorization — driven by the account NAME, not the account
+// number. Chart-of-accounts numbering varies by client, so prefix-
+// based matching gives wrong results outside narrow conventions
+// ("1010 Cash" works; "1300 Cash" doesn't). We test the account name
+// against an ordered list of regex patterns; the first match wins,
+// which is why ordering matters — more-specific patterns sit ahead of
+// their generic siblings (e.g. "accumulated depreciation" must beat
+// "depreciation" alone).
+//
+// FSLI_GROUPS is the canonical list of FSLIs the binder groups
+// accounts into. Each entry pairs a display label with the matchers
+// that route accounts onto it.
+
 type FsliGroup = {
   fsli: string;
-  prefix: string;
-  relatedPrefixes: string[];
+  // Patterns ordered from most-specific to most-generic within this
+  // FSLI. First hit wins across the whole list (not within a group).
+  patterns: RegExp[];
 };
 
 const FSLI_GROUPS: FsliGroup[] = [
-  { fsli: "Cash and Cash Equivalents", prefix: "101", relatedPrefixes: [] },
-  { fsli: "Accounts Receivable, net", prefix: "110", relatedPrefixes: [] },
-  { fsli: "Inventory", prefix: "120", relatedPrefixes: ["121", "122", "123"] },
-  { fsli: "Prepaid Expenses", prefix: "130", relatedPrefixes: [] },
-  { fsli: "Property, Plant & Equipment, net", prefix: "150", relatedPrefixes: ["151"] },
-  { fsli: "Other Assets", prefix: "160", relatedPrefixes: ["170", "180", "190"] },
-  { fsli: "Accounts Payable", prefix: "201", relatedPrefixes: [] },
-  { fsli: "Accrued Liabilities", prefix: "210", relatedPrefixes: [] },
-  { fsli: "Debt and Credit Facilities", prefix: "220", relatedPrefixes: ["230"] },
-  { fsli: "Other Liabilities", prefix: "240", relatedPrefixes: ["250", "260"] },
-  { fsli: "Equity", prefix: "30", relatedPrefixes: [] },
-  { fsli: "Revenue", prefix: "4", relatedPrefixes: [] },
-  { fsli: "Cost of Goods Sold", prefix: "5", relatedPrefixes: [] },
-  { fsli: "Operating Expenses", prefix: "60", relatedPrefixes: ["61", "62", "63"] },
+  // Accumulated depreciation rolls up under PP&E — list this BEFORE
+  // bare "depreciation" (which is an operating expense) so the more
+  // specific phrase wins.
+  {
+    fsli: "Property, Plant & Equipment, net",
+    patterns: [/\baccumulated\s+depreci/i],
+  },
+  // Allowance for doubtful is a contra-AR account.
+  {
+    fsli: "Accounts Receivable, net",
+    patterns: [/\ballowance\s+for\s+doubtful/i],
+  },
+  {
+    fsli: "Cash and Cash Equivalents",
+    patterns: [
+      /\bcash\b/i,
+      /\bpetty\s+cash\b/i,
+      /\bmoney\s+market\b/i,
+      /\bcertificat\w*\s+of\s+deposit\b/i,
+      /\bcds?\b/i,
+      /\b(bank|checking|savings)\s+account\b/i,
+      /\bdemand\s+deposit\b/i,
+    ],
+  },
+  {
+    fsli: "Accounts Receivable, net",
+    patterns: [
+      /\baccounts?\s+receivable\b/i,
+      /\btrade\s+receivable\b/i,
+      /\ba\/?r\b/i,
+      /\breceivable\s+from\b/i,
+    ],
+  },
+  {
+    fsli: "Inventory",
+    patterns: [
+      /\binventory\b/i,
+      /\braw\s+materials?\b/i,
+      /\bwork[- ]in[- ]progress\b/i,
+      /\bwip\b/i,
+      /\bfinished\s+goods?\b/i,
+    ],
+  },
+  {
+    fsli: "Prepaid Expenses",
+    patterns: [/\bprepaid\b/i],
+  },
+  // Debt patterns sit AHEAD of PP&E so that names like "Long-Term
+  // Debt — Equipment Loan" route to Debt instead of being captured by
+  // the "Equipment" PP&E pattern.
+  {
+    fsli: "Debt and Credit Facilities",
+    patterns: [
+      /\bline\s+of\s+credit\b/i,
+      /\bloc\b/i,
+      /\bcredit\s+facility\b/i,
+      /\b(long|short)[- ]term\s+debt\b/i,
+      /\bequipment\s+loan\b/i,
+      /\bloan\b/i,
+      /\bnotes?\s+payable\b/i,
+      /\bbonds?\s+payable\b/i,
+      /\bmortgage\b/i,
+    ],
+  },
+  {
+    fsli: "Accounts Payable",
+    patterns: [
+      /\baccounts?\s+payable\b/i,
+      /\btrade\s+payable\b/i,
+      /\ba\/?p\b/i,
+      /\bpayable\s+to\b/i,
+    ],
+  },
+  {
+    fsli: "Accrued Liabilities",
+    patterns: [/\baccrued\b/i],
+  },
+  {
+    fsli: "Property, Plant & Equipment, net",
+    patterns: [
+      /\bproperty\b/i,
+      /\bplant\b/i,
+      /\bequipment\b/i,
+      /\bbuilding\b/i,
+      /\bland\b/i,
+      /\bmachinery\b/i,
+      /\bfixtures?\b/i,
+      /\bvehicles?\b/i,
+      /\bleasehold\s+improvements?\b/i,
+      /\bpp&?e\b/i,
+    ],
+  },
+  {
+    fsli: "Other Assets",
+    patterns: [
+      /\bdeposits?\b/i,
+      /\bgoodwill\b/i,
+      /\bintangible\b/i,
+      /\binvestments?\b/i,
+      /\bother\s+assets?\b/i,
+    ],
+  },
+  {
+    fsli: "Other Liabilities",
+    patterns: [
+      /\b(deferred|unearned)\s+(revenue|income)\b/i,
+      /\bother\s+(long[- ]term\s+)?liabilit/i,
+    ],
+  },
+  {
+    fsli: "Equity",
+    patterns: [
+      /\bcommon\s+stock\b/i,
+      /\bpreferred\s+stock\b/i,
+      /\bretained\s+earnings\b/i,
+      /\bpaid[- ]in\s+capital\b/i,
+      /\bcontributed\s+capital\b/i,
+      /\btreasury\s+stock\b/i,
+      /\baoci\b/i,
+      /\bequity\b/i,
+      /\bdividends?\b/i,
+    ],
+  },
+  {
+    fsli: "Revenue",
+    patterns: [
+      /\brevenue\b/i,
+      /\bnet\s+sales\b/i,
+      /\bsales\s+revenue\b/i,
+      /\bservice\s+revenue\b/i,
+      /\bincome\s+from\s+operations\b/i,
+    ],
+  },
+  {
+    fsli: "Cost of Goods Sold",
+    patterns: [
+      /\bcost\s+of\s+goods\s+sold\b/i,
+      /\bcogs\b/i,
+      /\bcost\s+of\s+sales\b/i,
+      /\bcost\s+of\s+revenue\b/i,
+    ],
+  },
+  {
+    fsli: "Operating Expenses",
+    patterns: [
+      /\bsalar/i,
+      /\bwages?\b/i,
+      /\bpayroll\b/i,
+      /\butilit/i,
+      /\brent\b/i,
+      /\binsurance\b/i,
+      /\bprofessional\s+fees?\b/i,
+      /\blegal\s+fees?\b/i,
+      /\bconsulting\b/i,
+      /\brepairs?\s+(and|&)\s+maintenance\b/i,
+      /\bmaintenance\b/i,
+      /\bdeprec\w*\s+expenses?\b/i,
+      /\bamortization\b/i,
+      /\badvertising\b/i,
+      /\bmarketing\b/i,
+      /\btravel\b/i,
+      /\boffice\s+suppl/i,
+      /\binterest\s+expenses?\b/i,
+      /\btax\s+expenses?\b/i,
+      /\boperating\s+expenses?\b/i,
+      /\bsg&?a\b/i,
+      /\bg&?a\b/i,
+      /\badministrative\b/i,
+      /\bexpenses?\b/i,
+    ],
+  },
 ];
 
-function findFsli(acctNum: string): string {
-  for (const g of FSLI_GROUPS) {
-    if (acctNum.startsWith(g.prefix)) return g.fsli;
-    for (const rp of g.relatedPrefixes) {
-      if (acctNum.startsWith(rp)) return g.fsli;
+// Canonical balance-sheet display order — used by lead-sheet
+// pagination so tabs land in a predictable, audit-conventional
+// sequence. Decoupled from FSLI_GROUPS so we can keep that list in
+// pattern-match-specificity order without disturbing the UI.
+const CANONICAL_FSLI_ORDER = [
+  "Cash and Cash Equivalents",
+  "Accounts Receivable, net",
+  "Inventory",
+  "Prepaid Expenses",
+  "Property, Plant & Equipment, net",
+  "Other Assets",
+  "Accounts Payable",
+  "Accrued Liabilities",
+  "Debt and Credit Facilities",
+  "Other Liabilities",
+  "Equity",
+  "Revenue",
+  "Cost of Goods Sold",
+  "Operating Expenses",
+] as const;
+
+// Resolve an account's FSLI from its NAME. Account number is accepted
+// only for backwards compatibility with legacy call sites and is no
+// longer consulted in the matching itself.
+export function findFsli(_acctNum: string, name?: string): string {
+  if (name && name.trim().length > 0) {
+    for (const g of FSLI_GROUPS) {
+      for (const re of g.patterns) {
+        if (re.test(name)) return g.fsli;
+      }
     }
   }
   return "Other";
@@ -69,7 +263,7 @@ function nameTokens(s: string): string[] {
     .filter((w) => w.length >= 3 && !MATCH_STOPWORDS.has(w));
 }
 
-function matchMatrixRow(
+export function matchMatrixRow(
   account: TrialBalanceAccount,
   matrix: AssertionMatrix,
 ): AssertionMatrixRow | undefined {
@@ -126,6 +320,8 @@ export async function generateWorkpaperBinder(
   }
   buildNotesSheet(wb, engagement, matrix, trialBalance);
 
+  autosizeAllSheets(wb);
+
   const arrayBuffer = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);
 }
@@ -178,10 +374,20 @@ function buildScopingSheet(
   sheet.addRow([]);
 
   // Account selection block.
+  //
+  // Scope is Fieldwork-derived — never read from a TB column. Two signals
+  // feed the decision:
+  //   1. Materiality (PM):    |CY balance| > PM → coverage required
+  //   2. Assertion matrix:    matrix row exists → risk-driven scoping
+  //
+  // Accounts are "Scoped In" when EITHER signal fires. The Rationale
+  // column explains which one — using the matrix's own approach
+  // rationale where available, falling back to a materiality citation.
+  // The auditor can override either column post-generation.
   sectionHeader(sheet, "Account Selection");
   sheet.addRow([
-    "TB Scoping is the auditor's judgment from the trial balance " +
-      "(not a strict balance > PM math check). Above PM is shown separately.",
+    "Scope is derived from Fieldwork: balance vs. performance materiality + assertion-matrix coverage. " +
+      "Override the Scope or Rationale columns directly if your judgment differs.",
   ]).font = { italic: true, color: { argb: "FF555555" } };
 
   const header = sheet.addRow([
@@ -190,7 +396,7 @@ function buildScopingSheet(
     "CY Balance",
     "PY Balance",
     "Above PM?",
-    "TB Scoping",
+    "Scope",
     "Rationale",
   ]);
   styleTableHeader(header);
@@ -200,33 +406,26 @@ function buildScopingSheet(
   if (trialBalance) {
     for (const a of trialBalance.accounts) {
       const matrixRow = matchMatrixRow(a, matrix);
-      const aboveBalanceThreshold = Math.abs(a.cyBalance) > pm;
-      // Normalize the TB's scoping column to a binary judgment label.
-      // The TB stores values like "Scoped In", "Below PM", or "" — we collapse
-      // anything that isn't explicitly "Scoped In" into "Scoped Out" so the
-      // column reads as a clean in/out indicator. The math nuance ("Below PM")
-      // lives in the adjacent "Above PM?" column.
-      const tbScoping = a.materialityScoping?.trim() ?? "";
-      const isScopedIn = tbScoping
-        ? /scoped in/i.test(tbScoping)
-        : matrixRow != null;
-      const scope = isScopedIn ? "Scoped In" : "Scoped Out";
-      // Rationale picks the most accurate explanation we have:
-      //   - matrix match → use the matrix's planned-approach rationale
-      //   - scoped in per TB but no matrix row → flag for follow-up
-      //   - scoped out per TB → reference the auditor's judgment
+      const abovePm = Math.abs(a.cyBalance) > pm;
+      const inMatrix = matrixRow != null;
+      const isScopedIn = abovePm || inMatrix;
+
+      // Rationale precedence: matrix's own approachRationale takes
+      // priority (richest signal); otherwise cite the materiality math;
+      // otherwise explicitly mark as out-of-scope.
       const rationale = matrixRow
         ? matrixRow.approachRationale
-        : isScopedIn
-          ? "Scoped per TB but no matrix row generated — confirm scoping before fieldwork."
-          : "Scoped out per TB (auditor judgment — not subject to substantive procedures).";
+        : abovePm
+          ? `Above performance materiality (|CY| $${Math.abs(a.cyBalance).toLocaleString()} > PM $${pm.toLocaleString()}) — substantive coverage required.`
+          : "Below performance materiality and not flagged by the assertion matrix — no substantive procedures planned.";
+
       const row = sheet.addRow([
         `${a.acctNum} — ${a.name}`,
-        a.section,
+        findFsli(a.acctNum, a.name),
         a.cyBalance,
         a.pyBalance,
-        aboveBalanceThreshold ? "Yes" : "No",
-        scope,
+        abovePm ? "Yes" : "No",
+        isScopedIn ? "Scoped In" : "Scoped Out",
         rationale,
       ]);
       row.alignment = { vertical: "top", wrapText: true };
@@ -234,16 +433,9 @@ function buildScopingSheet(
       row.getCell(3).numFmt = USD_FMT;
       row.getCell(4).numFmt = USD_FMT;
 
-      // Color the "Above PM?" cell red when the math says above-PM but the
-      // auditor scoped it out — that's the contradiction worth flagging.
-      if (aboveBalanceThreshold && !isScopedIn) {
-        row.getCell(5).fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFFADBD8" },
-        };
-        row.getCell(5).font = { bold: true, color: { argb: "FF8A2F2F" } };
-      } else if (aboveBalanceThreshold) {
+      // Above-PM emphasis. No flagging based on a manual override
+      // anymore — the scope follows the math by default.
+      if (abovePm) {
         row.getCell(5).font = { bold: true };
       }
 
@@ -393,15 +585,19 @@ function buildLeadSheets(
   // Group accounts by FSLI.
   const grouped: Record<string, TrialBalanceAccount[]> = {};
   for (const a of trialBalance.accounts) {
-    const fsli = findFsli(a.acctNum);
+    const fsli = findFsli(a.acctNum, a.name);
     (grouped[fsli] ??= []).push(a);
   }
 
-  // Order: match the FSLI_GROUPS sequence, then any "Other".
-  const orderedFslis = [
-    ...FSLI_GROUPS.map((g) => g.fsli).filter((f) => grouped[f]?.length),
-    ...(grouped["Other"] ? ["Other"] : []),
-  ];
+  // Display order — canonical balance-sheet flow (assets, liabilities,
+  // equity, then P&L). Distinct from FSLI_GROUPS' ORDER, which is
+  // tuned for pattern-match specificity (contra accounts first), not
+  // for how a reader expects the lead-sheet tabs to appear.
+  const orderedFslis: string[] = [];
+  for (const fsli of CANONICAL_FSLI_ORDER) {
+    if (grouped[fsli]?.length) orderedFslis.push(fsli);
+  }
+  if (grouped["Other"]) orderedFslis.push("Other");
 
   for (const fsli of orderedFslis) {
     const accounts = grouped[fsli];
@@ -474,6 +670,7 @@ function buildLeadSheet(
 
   let cyTotal = 0;
   let pyTotal = 0;
+  const firstAcctRow = sheet.rowCount + 1;
   for (const a of accounts) {
     const matrixRow = matchMatrixRow(a, matrix);
     const cy = a.cyBalance;
@@ -487,8 +684,8 @@ function buildLeadSheet(
       a.name,
       cy,
       py,
-      dollarChange,
-      pctChange,
+      "",
+      "",
       matrixRow
         ? TESTING_APPROACH_LABELS[matrixRow.plannedApproach]
         : "Not scoped",
@@ -498,18 +695,30 @@ function buildLeadSheet(
     row.height = Math.max(row.height ?? 0, 30);
     row.getCell(3).numFmt = USD_FMT;
     row.getCell(4).numFmt = USD_FMT;
+    // $ Change = CY − PY, % Change = $ Change / |PY|. Live formulas so the
+    // auditor can edit a balance and the column refreshes.
+    row.getCell(5).value = {
+      formula: `C${row.number}-D${row.number}`,
+      result: dollarChange,
+    };
     row.getCell(5).numFmt = USD_FMT;
+    row.getCell(6).value = {
+      formula: `IFERROR((C${row.number}-D${row.number})/ABS(D${row.number}),0)`,
+      result: pctChange ?? 0,
+    };
     row.getCell(6).numFmt = PCT_FMT;
   }
+  const lastAcctRow = sheet.rowCount;
 
-  // Subtotal row.
+  // Subtotal row — SUM of the account rows + formula-driven $ Change /
+  // % Change so it stays in sync with edits.
   const subtotal = sheet.addRow([
     "",
     "TOTAL",
-    cyTotal,
-    pyTotal,
-    cyTotal - pyTotal,
-    pyTotal !== 0 ? (cyTotal - pyTotal) / Math.abs(pyTotal) : null,
+    "",
+    "",
+    "",
+    "",
     "",
     "",
   ]);
@@ -517,12 +726,34 @@ function buildLeadSheet(
   subtotal.eachCell((cell) => {
     cell.border = { top: { style: "thin" }, bottom: { style: "double" } };
   });
+  if (lastAcctRow >= firstAcctRow) {
+    subtotal.getCell(3).value = {
+      formula: `SUM(C${firstAcctRow}:C${lastAcctRow})`,
+      result: cyTotal,
+    };
+    subtotal.getCell(4).value = {
+      formula: `SUM(D${firstAcctRow}:D${lastAcctRow})`,
+      result: pyTotal,
+    };
+  } else {
+    subtotal.getCell(3).value = cyTotal;
+    subtotal.getCell(4).value = pyTotal;
+  }
+  subtotal.getCell(5).value = {
+    formula: `C${subtotal.number}-D${subtotal.number}`,
+    result: cyTotal - pyTotal,
+  };
+  subtotal.getCell(6).value = {
+    formula: `IFERROR((C${subtotal.number}-D${subtotal.number})/ABS(D${subtotal.number}),0)`,
+    result: pyTotal !== 0 ? (cyTotal - pyTotal) / Math.abs(pyTotal) : 0,
+  };
   subtotal.getCell(3).numFmt = USD_FMT;
   subtotal.getCell(4).numFmt = USD_FMT;
   subtotal.getCell(5).numFmt = USD_FMT;
   subtotal.getCell(6).numFmt = PCT_FMT;
 
-  // Materiality reference.
+  // Materiality reference. Material? is a live formula comparing the
+  // subtotal CY against PM so edits stay in sync.
   sheet.addRow([]);
   const matRow = sheet.addRow([
     "",
@@ -530,13 +761,19 @@ function buildLeadSheet(
     engagement.materiality.performanceMateriality,
     "",
     "Material?",
-    Math.abs(cyTotal) > engagement.materiality.performanceMateriality
-      ? "Yes"
-      : "No",
+    "",
   ]);
   matRow.getCell(3).numFmt = USD_FMT;
   matRow.getCell(2).font = { bold: true };
   matRow.getCell(5).font = { bold: true };
+  matRow.getCell(6).value = {
+    formula: `IF(ABS(C${subtotal.number})>C${matRow.number},"Yes","No")`,
+    result:
+      Math.abs(cyTotal) > engagement.materiality.performanceMateriality
+        ? "Yes"
+        : "No",
+  };
+  matRow.getCell(6).font = { bold: true };
 
   // Reviewer sign-off block.
   sheet.addRow([]);

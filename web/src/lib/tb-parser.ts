@@ -60,10 +60,15 @@ export async function parseTrialBalance(
     if (isTotalRow(accountName)) continue;
     if (!acctNum) continue;
 
-    // For income-statement rows we override section using the account number:
-    // 4xxx is revenue, everything else under "Income Statement" is expense.
-    let effectiveSection = section;
-    if (section === "Revenue" || section === "Expense" || section === null) {
+    // Resolve the section. Preference: explicit divider above the row;
+    // otherwise infer from the account-number prefix (1xxx Asset,
+    // 2xxx Liability, 3xxx Equity, 4xxx Revenue, 5xxx/6xxx Expense).
+    // Income-statement bucket dividers ("Income Statement" / "Revenue")
+    // are refined by prefix because 4xxx vs 5xxx/6xxx split them.
+    let effectiveSection: TrialBalanceAccount["section"] | null = section;
+    if (section === null) {
+      effectiveSection = inferSectionFromAcctNum(acctNum);
+    } else if (section === "Revenue" || section === "Expense") {
       effectiveSection = acctNum.startsWith("4") ? "Revenue" : "Expense";
     }
     if (!effectiveSection) continue;
@@ -155,6 +160,22 @@ function sectionFromDivider(
 
 function isTotalRow(text: string): boolean {
   return /^(TOTAL\b|NET\s+INCOME\b|GROSS\s+PROFIT\b)/i.test(text.trim());
+}
+
+// Fallback section inference when the trial balance lacks explicit
+// section dividers (e.g. "── ASSETS ──" headers). Uses the first
+// digit of the account number per standard chart-of-accounts
+// conventions: 1=Asset, 2=Liability, 3=Equity, 4=Revenue, 5/6=Expense.
+function inferSectionFromAcctNum(
+  acctNum: string,
+): TrialBalanceAccount["section"] | null {
+  const first = acctNum.trim().charAt(0);
+  if (first === "1") return "Asset";
+  if (first === "2") return "Liability";
+  if (first === "3") return "Equity";
+  if (first === "4") return "Revenue";
+  if (first === "5" || first === "6") return "Expense";
+  return null;
 }
 
 // Render the TB as a compact text block to inject into the matrix prompt.

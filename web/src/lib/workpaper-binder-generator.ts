@@ -1,10 +1,10 @@
 import { exportEngagement } from "@/lib/engagement-repo";
 import { generateAssertionMatrix } from "@/lib/assertion-matrix-generator";
 import {
-  ENGAGEMENT_FILES_BUCKET,
-  getServerSupabase,
-} from "@/lib/supabase/server";
-import { parseTrialBalance, type TrialBalance } from "@/lib/tb-parser";
+  loadTrialBalanceForEngagement,
+  requireUploadsConfirmed,
+} from "@/lib/intake/load-canonical";
+import type { TrialBalance } from "@/lib/tb-parser";
 import { generateWorkpaperBinder } from "@/lib/workpaper-binder";
 
 export type BinderGenerationResult = {
@@ -22,24 +22,17 @@ export async function generateBinder(
 ): Promise<BinderGenerationResult> {
   const engagement = await exportEngagement(engagementId);
 
-  // Load the parsed TB once for the binder side (lead sheets need it). The
-  // matrix generator does its own parse pass — duplicated, but each path
-  // benefits from being self-contained.
+  // Verification gate — the binder reads the canonical TB for lead sheets,
+  // and the matrix prompt path also reads it. Block if uploaded but not
+  // confirmed. AR Aging + SCR aren't currently consumed by the binder, so
+  // they're not required here.
+  await requireUploadsConfirmed(engagementId, ["cy_tb"]);
+
+  // Load the canonical TB once for the binder side (lead sheets need it).
+  // The matrix generator does its own load pass.
   let trialBalance: TrialBalance | null = null;
   if (engagement.cyTrialBalanceFile.sizeBytes > 0) {
-    try {
-      const sb = getServerSupabase();
-      const { data, error } = await sb.storage
-        .from(ENGAGEMENT_FILES_BUCKET)
-        .download(engagement.cyTrialBalanceFile.storagePath);
-      if (error || !data) {
-        throw new Error(`storage download: ${error?.message ?? "no data"}`);
-      }
-      const buffer = Buffer.from(await data.arrayBuffer());
-      trialBalance = await parseTrialBalance(buffer);
-    } catch {
-      trialBalance = null;
-    }
+    trialBalance = await loadTrialBalanceForEngagement(engagementId);
   }
 
   const { matrix } = await generateAssertionMatrix(engagementId);

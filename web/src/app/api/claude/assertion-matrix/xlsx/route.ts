@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateAssertionMatrix } from "@/lib/assertion-matrix-generator";
 import { matrixToXlsx } from "@/lib/matrix-to-xlsx";
+import { saveGeneratedArtifact } from "@/lib/generated-artifacts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,20 @@ export async function POST(req: Request) {
 
     const ts = matrix.generatedAt.replace(/[:.]/g, "-").slice(0, 19);
     const filename = `assertion-matrix-${matrix.engagementId.slice(0, 8)}-${ts}.xlsx`;
+
+    try {
+      await saveGeneratedArtifact({
+        engagementId: parsed.data.engagementId,
+        kind: "matrix",
+        buffer: xlsxBuffer,
+        filename,
+        contentType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+    } catch (saveErr) {
+      // eslint-disable-next-line no-console
+      console.warn("Matrix artifact save failed:", saveErr);
+    }
 
     return new NextResponse(new Uint8Array(xlsxBuffer), {
       status: 200,

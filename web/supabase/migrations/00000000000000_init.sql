@@ -30,7 +30,7 @@ create type business_change_category_enum as enum (
   'ManagementChange', 'SystemChange', 'NewProductOrMarket', 'MergerOrAcquisition',
   'Restructuring', 'SignificantContract', 'RegulatoryChange', 'Other'
 );
-create type engagement_file_kind_enum as enum ('py_audit', 'cy_tb');
+create type engagement_file_kind_enum as enum ('py_audit', 'cy_tb', 'ar_aging', 'subsequent_cash_receipts');
 
 create table engagements (
   id                              uuid primary key default gen_random_uuid(),
