@@ -46,7 +46,14 @@ const TIERS: Tier[] = [
 
 export function Pricing() {
   return (
-    <section id="pricing" className="bg-secondary/40 py-20">
+    <section
+      id="pricing"
+      style={{
+        backgroundColor:
+          "color-mix(in oklab, var(--color-fw-cream-deep) 70%, var(--color-fw-navy) 12%)",
+      }}
+      className="py-20"
+    >
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionHeading>Per-seat pricing.</SectionHeading>
         <p className="mt-3 max-w-xl text-foreground/70">
