@@ -15,7 +15,7 @@ const STEPS: Step[] = [
   {
     n: "01",
     title: "Client Information",
-    body: "Client, fiscal year end, framework, and industry. Drives industry-specific templates and assertion-risk mapping downstream.",
+    body: "Input client, fiscal year end, framework, and industry to drive industry-specific templates and assertion-risk mapping downstream.",
   },
   {
     n: "02",
