@@ -81,7 +81,9 @@ export async function createEngagement(
     overall_materiality: values.overallMateriality,
     performance_materiality: values.performanceMateriality,
     clearly_trivial_threshold: values.clearlyTrivialThreshold,
-    materiality_basis: values.materialityBasis,
+    // Basis field removed from the UI; column still required by the DB
+    // check constraint, so write a placeholder until the column is dropped.
+    materiality_basis: "(not specified)",
   });
   if (insertError) throw new Error(`createEngagement failed: ${insertError.message}`);
 
@@ -108,7 +110,6 @@ export async function updateEngagement(
       overall_materiality: values.overallMateriality,
       performance_materiality: values.performanceMateriality,
       clearly_trivial_threshold: values.clearlyTrivialThreshold,
-      materiality_basis: values.materialityBasis,
     })
     .eq("id", id);
   if (error) throw new Error(`updateEngagement failed: ${error.message}`);
@@ -257,7 +258,6 @@ export async function getEngagement(id: string): Promise<EngagementDetail | null
     overallMateriality: Number(engagement.overall_materiality),
     performanceMateriality: Number(engagement.performance_materiality),
     clearlyTrivialThreshold: Number(engagement.clearly_trivial_threshold),
-    materialityBasis: engagement.materiality_basis,
   };
 
   return {
@@ -436,7 +436,6 @@ export async function exportEngagement(id: string): Promise<EngagementSetup> {
       overallMateriality: v.overallMateriality,
       performanceMateriality: v.performanceMateriality,
       clearlyTrivialThreshold: v.clearlyTrivialThreshold,
-      basis: v.materialityBasis,
     },
     createdAt: detail.createdAt,
     updatedAt: detail.updatedAt,

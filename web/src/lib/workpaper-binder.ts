@@ -366,11 +366,6 @@ function buildScopingSheet(
   addLabelValue(sheet, "Overall materiality", m.overallMateriality, USD_FMT);
   addLabelValue(sheet, "Performance materiality", m.performanceMateriality, USD_FMT);
   addLabelValue(sheet, "Clearly trivial threshold", m.clearlyTrivialThreshold, USD_FMT);
-  const basisRow = sheet.addRow(["Basis", m.basis]);
-  basisRow.getCell(1).font = { bold: true };
-  basisRow.alignment = { vertical: "top", wrapText: true };
-  basisRow.height = Math.max(40, m.basis.length / 1.2);
-  sheet.mergeCells(basisRow.number, 2, basisRow.number, 6);
   sheet.addRow([]);
 
   // Account selection block.

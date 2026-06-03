@@ -115,7 +115,6 @@ export const EngagementSetupSchema = z
       overallMateriality: z.number().positive(),
       performanceMateriality: z.number().positive(),
       clearlyTrivialThreshold: z.number().positive(),
-      basis: z.string().min(1).max(2000),
     }),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
@@ -147,7 +146,6 @@ export const EngagementFormSchema = z
     clearlyTrivialThreshold: z.coerce.number().positive(
       "Clearly trivial threshold must be greater than 0",
     ),
-    materialityBasis: z.string().min(1, "Basis is required").max(2000),
   })
   .strict();
 

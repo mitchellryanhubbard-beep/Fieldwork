@@ -63,7 +63,6 @@ const EMPTY_DEFAULTS: EngagementFormValues = {
   overallMateriality: 0,
   performanceMateriality: 0,
   clearlyTrivialThreshold: 0,
-  materialityBasis: "",
 };
 
 export function EngagementForm({
@@ -225,18 +224,6 @@ export function EngagementForm({
               {...form.register("clearlyTrivialThreshold")}
             />
           </Field>
-          <div className="sm:col-span-3">
-            <Field
-              label="Basis"
-              error={form.formState.errors.materialityBasis?.message}
-            >
-              <Textarea
-                rows={3}
-                placeholder="e.g., Overall = 5% of pretax income; PM = 75% of overall; CTT = 5% of PM."
-                {...form.register("materialityBasis")}
-              />
-            </Field>
-          </div>
         </div>
       </NumberedSection>
 

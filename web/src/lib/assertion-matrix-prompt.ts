@@ -82,7 +82,6 @@ export function buildAssertionMatrixUserMessage(
   lines.push(
     `- Clearly trivial: ${v.materiality.clearlyTrivialThreshold.toLocaleString()}`,
   );
-  lines.push(`- Basis: ${v.materiality.basis}`);
   lines.push("");
 
   lines.push("## CY Risk Profile");
