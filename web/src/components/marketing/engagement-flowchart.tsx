@@ -131,7 +131,7 @@ function SideArrow({
     >
       <svg
         viewBox="0 0 70 56"
-        className="size-full text-accent/40 transition-colors duration-300 ease-out group-hover:text-accent"
+        className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
         style={{ overflow: "visible" }}
       >
         <g
