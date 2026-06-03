@@ -94,11 +94,31 @@ export async function matrixToXlsx(matrix: AssertionMatrix): Promise<Buffer> {
   sheet.getColumn("cyBalance").numFmt = '"$"#,##0;[Red]("$"#,##0)';
   sheet.getColumn("pyBalance").numFmt = '"$"#,##0;[Red]("$"#,##0)';
 
-  // Wrap long text + vertical-top align so multi-line cells don't get clipped.
+  // Wrap long text + vertical-top align so multi-line cells don't get
+  // clipped. Row height is computed from the tallest wrapped cell in the
+  // row so every paragraph in Risks / Rationale / Citation fits without
+  // the auditor having to drag row dividers manually.
+  const LINE_HEIGHT = 15.5;
+  const ROW_PADDING = 8;
+  const MIN_DATA_ROW_HEIGHT = 30;
   sheet.eachRow({ includeEmpty: false }, (row, rowIndex) => {
     if (rowIndex === 1) return;
     row.alignment = { vertical: "top", wrapText: true };
-    row.height = Math.max(row.height ?? 0, 60);
+
+    let maxLines = 1;
+    row.eachCell({ includeEmpty: false }, (cell, colNum) => {
+      const colWidth = columns[colNum - 1]?.width ?? 20;
+      const text =
+        typeof cell.value === "string"
+          ? cell.value
+          : cell.value == null
+            ? ""
+            : String(cell.value);
+      if (!text) return;
+      const lines = countWrappedLines(text, colWidth);
+      if (lines > maxLines) maxLines = lines;
+    });
+    row.height = Math.max(maxLines * LINE_HEIGHT + ROW_PADDING, MIN_DATA_ROW_HEIGHT);
   });
 
   // Color-code overall risk for fast scanning.
@@ -141,21 +161,29 @@ export async function matrixToXlsx(matrix: AssertionMatrix): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
-// Approximates the row height needed to display `text` wrapped at the given
-// column width without truncation. Counts explicit newlines plus the wrap
-// span of each line (charsPerLine ≈ Excel column width in default font).
-// Excel default row line height is ~15 points; pad slightly for descenders.
-function computeWrappedRowHeight(text: string, charsPerLine: number): number {
-  const LINE_HEIGHT = 15.5;
-  const PADDING = 8;
-  const MIN_HEIGHT = 60;
-  const wrappedLines = text
+// Counts the visible wrapped-line span of `text` when displayed in a column
+// `charsPerLine` characters wide. Each explicit newline starts a new line;
+// each line wraps every charsPerLine characters.
+function countWrappedLines(text: string, charsPerLine: number): number {
+  return text
     .split("\n")
     .reduce(
       (acc, line) => acc + Math.max(1, Math.ceil(line.length / charsPerLine)),
       0,
     );
-  return Math.max(wrappedLines * LINE_HEIGHT + PADDING, MIN_HEIGHT);
+}
+
+// Approximates the row height needed to display `text` wrapped at the given
+// column width without truncation. Excel default row line height is ~15 pt;
+// pad slightly for descenders.
+function computeWrappedRowHeight(text: string, charsPerLine: number): number {
+  const LINE_HEIGHT = 15.5;
+  const PADDING = 8;
+  const MIN_HEIGHT = 60;
+  return Math.max(
+    countWrappedLines(text, charsPerLine) * LINE_HEIGHT + PADDING,
+    MIN_HEIGHT,
+  );
 }
 
 type MatrixRowFlat = {
