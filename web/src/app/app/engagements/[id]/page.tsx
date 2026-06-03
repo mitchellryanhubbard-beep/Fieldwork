@@ -98,15 +98,6 @@ export default async function EditEngagementPage({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <GenerateBinderButton
-            engagementId={id}
-            clientName={v.clientName || "engagement"}
-            generationBlockedReason={binderBlocker}
-          />
-          <GenerateMatrixButton
-            engagementId={id}
-            clientName={v.clientName || "engagement"}
-          />
           <Link
             href={`/app/engagements/${id}/export`}
             className={buttonVariants({ variant: "goldOutline" })}
@@ -152,6 +143,18 @@ export default async function EditEngagementPage({
               current={detail.cyTrialBalanceFile}
               verification={verifications.cy_tb}
             />
+
+            <div className="flex flex-wrap gap-2 border-t border-primary/10 pt-4">
+              <GenerateBinderButton
+                engagementId={id}
+                clientName={v.clientName || "engagement"}
+                generationBlockedReason={binderBlocker}
+              />
+              <GenerateMatrixButton
+                engagementId={id}
+                clientName={v.clientName || "engagement"}
+              />
+            </div>
           </div>
         </NumberedSection>
 
