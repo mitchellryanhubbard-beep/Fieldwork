@@ -67,8 +67,8 @@ export function EngagementFlowchart() {
       <div className="mx-auto w-full max-w-3xl px-6">
         <SectionHeading>Inside an engagement.</SectionHeading>
         <p className="mt-3 max-w-xl text-foreground/70">
-          The actual workflow auditors walk through, from setup to substantive
-          testing.
+          The actual workflow auditors walk through within First-Pass, from
+          setup to substantive testing.
         </p>
 
         <div className="mt-12 space-y-3">
