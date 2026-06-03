@@ -3,7 +3,7 @@ import {
   getServerSupabase,
 } from "@/lib/supabase/server";
 
-// Persists generated artifacts (workpaper binders, assertion matrices)
+// Persists generated artifacts (audit binders, assertion matrices)
 // under a stable engagement folder so the UI can list and re-download
 // without re-running the heavy generation step.
 //

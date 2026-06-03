@@ -128,7 +128,7 @@ export default async function EditEngagementPage({
         <NumberedSection
           n={5}
           title="Generate"
-          description="Generate the workpaper binder (scoping memo + assertion plan + lead sheets) and the standalone assertion-risk matrix workbook from the inputs above."
+          description="Generate the audit binder (scoping memo + assertion plan + lead sheets) and the standalone assertion-risk matrix workbook from the inputs above."
         >
           <div className="flex flex-wrap gap-2">
             <GenerateBinderButton

@@ -22,7 +22,7 @@ export function GenerateBinderButton({
   async function handleClick() {
     if (isPending) return;
     setIsPending(true);
-    const toastId = toast.loading("Building workpaper binder…", {
+    const toastId = toast.loading("Building audit binder…", {
       description:
         "Generating scoping memo, assertion plan, and lead sheets. About 60–90 seconds.",
     });
@@ -48,13 +48,13 @@ export function GenerateBinderButton({
         .slice(0, 40);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${safeClient}-workpaper-binder.xlsx`;
+      a.download = `${safeClient}-audit-binder.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
 
-      toast.success("Workpaper binder downloaded", {
+      toast.success("Audit binder downloaded", {
         id: toastId,
         description: "Open in Excel to review the scoping memo + lead sheets.",
       });
@@ -79,7 +79,7 @@ export function GenerateBinderButton({
         disabled={isPending || !!generationBlockedReason}
         title={generationBlockedReason}
       >
-        {isPending ? "Building binder… (60-90s)" : "Generate Workpaper Binder"}
+        {isPending ? "Building binder… (60-90s)" : "Generate Audit Binder"}
       </Button>
       <GeneratedArtifactHistory
         engagementId={engagementId}
