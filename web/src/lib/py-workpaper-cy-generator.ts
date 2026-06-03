@@ -1709,10 +1709,22 @@ function shiftNarrativeDates(wb: ExcelJS.Workbook, cyYear: number): number {
 // Shifts year tokens by +1, but only for years strictly less than
 // cyYear — so a chain of PY-era references ("FY 2022 to FY 2023") all
 // roll forward together while CY-and-later references stay put.
+// Bulletproof date shifter. Only PY-year dates (yyyy === cyYear-1 or
+// "yy" === last-two-digits of cyYear-1) roll forward to CY. Older
+// comparative years (FY 2022, FY 2023, …) roll +1 because comparative
+// columns also shift one slot left. Years that are already CY or
+// future stay put — preventing the previous "+1 unconditionally"
+// behavior that turned a stray 2030 deadline into 2031 every time
+// the workpaper was regenerated.
 function shiftDatesInString(text: string, cyYear: number): string {
+  const pyYear = cyYear - 1;
+  const pyYy = String(pyYear).slice(-2);
+  const cyYy = String(cyYear).slice(-2);
   let out = text;
-  // FY/CY/PY/Q1-4 year references — shift any year strictly below cyYear.
-  // E.g. with cyYear=2024: FY 2022→2023, FY 2023→2024, FY 2024 unchanged.
+
+  // FY/CY/PY/Q1-4 year refs — comparative-friendly: shift any year
+  // strictly below cyYear by +1 so a 3-column comparative
+  // (FY 2022, FY 2023, FY 2024) rolls to (FY 2023, FY 2024, FY 2025).
   out = out.replace(
     /\b(FY|CY|PY|Fiscal\s+Year|Q[1-4])\s+(20\d{2})\b/gi,
     (full, prefix: string, y: string) => {
@@ -1721,42 +1733,55 @@ function shiftDatesInString(text: string, cyYear: number): string {
       return `${prefix} ${yearNum + 1}`;
     },
   );
-  // ISO date YYYY-MM-DD — shift by +1 unconditionally. Narrative
-  // dates (mailing dates, deadlines, cash-receipt windows) describe
-  // when work was performed in the PY audit cycle and need to roll
-  // forward one full year regardless of whether YYYY matches cyYear.
+
+  // ISO date YYYY-MM-DD — only shift when the year IS pyYear, so
+  // future-dated deadlines / forecasts don't tick on every rollforward.
   out = out.replace(
     /\b(20\d{2})-(\d{2})-(\d{2})\b/g,
-    (_full, y: string, m: string, d: string) => {
-      const yearNum = parseInt(y, 10);
-      return `${yearNum + 1}-${m}-${d}`;
+    (full, y: string, m: string, d: string) => {
+      if (parseInt(y, 10) !== pyYear) return full;
+      return `${cyYear}-${m}-${d}`;
     },
   );
-  // US date M/D/YYYY — shift by +1 unconditionally.
+
+  // US date M/D/YYYY — same pyYear-only guard.
   out = out.replace(
     /\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/g,
-    (_full, m: string, d: string, y: string) => {
-      const yearNum = parseInt(y, 10);
-      return `${m}/${d}/${yearNum + 1}`;
+    (full, m: string, d: string, y: string) => {
+      if (parseInt(y, 10) !== pyYear) return full;
+      return `${m}/${d}/${cyYear}`;
     },
   );
-  // "Month D, YYYY" / "Month D YYYY" (e.g. "December 31, 2023") —
-  // shift +1. Matched before bare "Month YYYY" so the longer form wins.
+
+  // US date M/D/YY (2-digit year, common on schedule banners like
+  // "Gross trade receivables, 12/31/24"). Match the last two digits
+  // of pyYear; preserve 2-digit format on output.
+  out = out.replace(
+    /\b(\d{1,2})\/(\d{1,2})\/(\d{2})\b/g,
+    (full, m: string, d: string, yy: string) => {
+      if (yy !== pyYy) return full;
+      return `${m}/${d}/${cyYy}`;
+    },
+  );
+
+  // "Month D, YYYY" — pyYear-only.
   out = out.replace(
     /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(20\d{2})\b/g,
-    (_full, month: string, day: string, y: string) => {
-      const yearNum = parseInt(y, 10);
-      return `${month} ${day}, ${yearNum + 1}`;
+    (full, month: string, day: string, y: string) => {
+      if (parseInt(y, 10) !== pyYear) return full;
+      return `${month} ${day}, ${cyYear}`;
     },
   );
-  // "Month YYYY" — shift by +1 unconditionally.
+
+  // "Month YYYY" — pyYear-only.
   out = out.replace(
     /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(20\d{2})\b/g,
-    (_full, month: string, y: string) => {
-      const yearNum = parseInt(y, 10);
-      return `${month} ${yearNum + 1}`;
+    (full, month: string, y: string) => {
+      if (parseInt(y, 10) !== pyYear) return full;
+      return `${month} ${cyYear}`;
     },
   );
+
   return out;
 }
 
