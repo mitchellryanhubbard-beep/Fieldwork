@@ -5,7 +5,8 @@ import { FileUpload } from "@/components/file-upload";
 import { GenerateBinderButton } from "@/components/generate-binder-button";
 import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { DeleteEngagementButton } from "@/components/delete-engagement-button";
 import { Chip } from "@/components/ui/chip";
 import { loadVerification, type VerificationRecord } from "@/lib/intake/storage";
 import {
@@ -98,11 +99,10 @@ export default async function EditEngagementPage({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <form action={handleDelete}>
-            <Button type="submit" variant="destructive">
-              Delete
-            </Button>
-          </form>
+          <DeleteEngagementButton
+            clientName={v.clientName || "this engagement"}
+            action={handleDelete}
+          />
         </div>
       </header>
 
