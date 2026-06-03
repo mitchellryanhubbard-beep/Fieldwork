@@ -130,7 +130,7 @@ function FlowCard({ n, title, body }: Step) {
 
 // Shared chevron tip geometry — 10 wide × 5 deep. Used by the YBranch
 // legs so the tip matches the SideArrow marker visually.
-const TIP_PATH = "M -5 -5 L 0 0 L 5 -5";
+const TIP_PATH = "M -5 -5 Q -2 -2 0 0 Q 2 -2 5 -5";
 
 // SideArrow — hover-triggered curved arrow that arcs out from the side
 // of the current card and comes back in pointing down at the next
@@ -181,7 +181,7 @@ function SideArrow({
             orient="auto-start-reverse"
           >
             <path
-              d="M 1 1 L 9 5 L 1 9"
+              d="M 1 1 Q 6 3 9 5 Q 6 7 1 9"
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
@@ -250,7 +250,7 @@ function ForkArrow({
             orient="auto-start-reverse"
           >
             <path
-              d="M 1 1 L 9 5 L 1 9"
+              d="M 1 1 Q 6 3 9 5 Q 6 7 1 9"
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
