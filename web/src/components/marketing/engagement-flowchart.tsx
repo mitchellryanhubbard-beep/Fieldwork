@@ -71,11 +71,11 @@ export function EngagementFlowchart() {
           setup to substantive testing.
         </p>
 
-        <div className="mt-12 space-y-3">
+        <div className="mt-12 space-y-12">
           {STEPS.map((s, i) => (
-            <div key={s.n}>
+            <div key={s.n} className="group relative">
               <FlowCard {...s} />
-              {i < STEPS.length - 1 ? <DownArrow /> : null}
+              {i < STEPS.length - 1 ? <SideArrow index={i} /> : null}
             </div>
           ))}
 
@@ -102,7 +102,7 @@ function FlowCard({ n, title, body }: Step) {
         {n}
       </span>
       <div className="min-w-0">
-        <h3 className="font-display text-sm font-semibold uppercase tracking-[0.22em] text-primary">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-primary">
           {title}
         </h3>
         <p className="mt-2 text-sm text-foreground/70">{body}</p>
@@ -111,27 +111,65 @@ function FlowCard({ n, title, body }: Step) {
   );
 }
 
-// Shared chevron tip geometry — 10 wide × 5 deep, drawn pointing down
-// from a vertical stem. Used by both DownArrow and the YBranch legs so
-// the tip looks identical everywhere.
+// Shared chevron tip geometry — 10 wide × 5 deep. Used by the YBranch
+// legs so the tip matches the SideArrow marker visually.
 const TIP_PATH = "M -5 -5 L 0 0 L 5 -5";
 
-function DownArrow() {
+// SideArrow — hover-triggered curved arrow that arcs out to the right of
+// the current card, then comes back in and points down at the next
+// card. Mirrors the StepArrow pattern in HowItWorks: opacity 0 by
+// default, reveals on group-hover of the surrounding step container.
+function SideArrow({ index }: { index: number }) {
+  const markerId = `fw-flow-tip-${index}`;
   return (
-    <div aria-hidden="true" className="flex justify-center py-1.5">
-      <svg viewBox="0 0 14 22" width="14" height="22" className="text-accent">
-        <g
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute z-10 hidden lg:block"
+      style={{
+        left: "calc(100% + 6px)",
+        top: "calc(100% - 4px)",
+        width: 70,
+        height: 56,
+      }}
+    >
+      <svg
+        viewBox="0 0 70 56"
+        className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
+        style={{ overflow: "visible" }}
+      >
+        <defs>
+          {/* Open chevron arrowhead — same shape as the StepArrow tip
+              and the YBranch leg tips so every arrowhead in the page
+              shares one visual language. */}
+          <marker
+            id={markerId}
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path
+              d="M 1 1 L 9 5 L 1 9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </marker>
+        </defs>
+        <path
+          d="M 4 0 Q 60 28 4 56"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth={3.5}
           strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M 7 0 L 7 19" />
-          <path d={TIP_PATH} transform="translate(7 19)" />
-        </g>
+          markerEnd={`url(#${markerId})`}
+        />
       </svg>
-    </div>
+    </span>
   );
 }
 
