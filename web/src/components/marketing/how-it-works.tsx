@@ -2,22 +2,18 @@ import { SectionHeading } from "./section-heading";
 
 const STEPS = [
   {
-    n: "01",
     title: "Engagement Setup",
     body: "Capture client, framework, industry, materiality, PY audit, and CY trial balance.",
   },
   {
-    n: "02",
     title: "Assertion-Risk Matrix",
     body: "AI maps every significant account to risks, assertions, and a planned approach.",
   },
   {
-    n: "03",
     title: "Workpaper generation",
     body: "Lead sheets, scoping documents, and per-account workpaper shells, all in Excel.",
   },
   {
-    n: "04",
     title: "Substantive testing",
     body: "Sample selections, testing procedures, tickmarks, and ratio + variance flagging.",
   },
@@ -110,13 +106,10 @@ export function HowItWorks() {
         <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s, i) => (
             <li
-              key={s.n}
+              key={s.title}
               className="group relative rounded-xl border border-primary/10 bg-card p-6 transition-colors duration-200 hover:bg-[#f5f0e2]"
             >
-              <p className="font-mono text-sm font-semibold text-accent">
-                {s.n}
-              </p>
-              <h3 className="mt-3 whitespace-nowrap font-display text-xl font-medium tracking-tight text-primary lg:text-base">
+              <h3 className="whitespace-nowrap font-display text-xl font-medium tracking-tight text-primary lg:text-base">
                 {s.title}
               </h3>
               <p className="mt-2 text-sm text-foreground/70">{s.body}</p>
