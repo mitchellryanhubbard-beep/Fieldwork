@@ -30,7 +30,7 @@ const STEPS: Step[] = [
   {
     n: "04",
     title: "Source Files",
-    body: "Prior-year signed audit opinion (PDF) and current-year trial balance (Excel, CSV, or PDF). Replacing an upload removes the prior file from storage.",
+    body: "Upload prior-year signed audit opinion (PDF) and current-year trial balance (Excel, CSV, or PDF).",
   },
   {
     n: "05",
