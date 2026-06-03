@@ -130,7 +130,7 @@ function FlowCard({ n, title, body }: Step) {
 
 // Shared chevron tip geometry — 10 wide × 5 deep. Used by the YBranch
 // legs so the tip matches the SideArrow marker visually.
-const TIP_PATH = "M -5 -5 C -3 -3 -1 -1 0 0 C 1 -1 3 -3 5 -5";
+const TIP_PATH = "M -6 -7 Q -3 -3 0 0 Q 3 -3 6 -7";
 
 // SideArrow — hover-triggered curved arrow that arcs out from the side
 // of the current card and comes back in pointing down at the next
@@ -173,18 +173,22 @@ function SideArrow({
         <defs>
           <marker
             id={markerId}
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="11"
-            markerHeight="11"
+            viewBox="0 0 14 14"
+            refX="12"
+            refY="7"
+            markerWidth="14"
+            markerHeight="14"
             orient="auto-start-reverse"
           >
+            {/* Hand-drawn-style arrowhead: wider spread, longer wings,
+                slight curve at the back so the tips flick out instead of
+                meeting cleanly. Closer to a sketched arrow than a tidy
+                geometric chevron. */}
             <path
-              d="M 0 0 C 5 2 9 4 9 5 C 9 6 5 8 0 10"
+              d="M 0 0 Q 7 3 12 7 Q 7 11 0 14"
               fill="none"
               stroke="currentColor"
-              strokeWidth={2.2}
+              strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -242,18 +246,22 @@ function ForkArrow({
         <defs>
           <marker
             id={markerId}
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="11"
-            markerHeight="11"
+            viewBox="0 0 14 14"
+            refX="12"
+            refY="7"
+            markerWidth="14"
+            markerHeight="14"
             orient="auto-start-reverse"
           >
+            {/* Hand-drawn-style arrowhead: wider spread, longer wings,
+                slight curve at the back so the tips flick out instead of
+                meeting cleanly. Closer to a sketched arrow than a tidy
+                geometric chevron. */}
             <path
-              d="M 0 0 C 5 2 9 4 9 5 C 9 6 5 8 0 10"
+              d="M 0 0 Q 7 3 12 7 Q 7 11 0 14"
               fill="none"
               stroke="currentColor"
-              strokeWidth={2.2}
+              strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
