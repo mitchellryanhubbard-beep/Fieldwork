@@ -231,7 +231,7 @@ function FsliBreakdown({
   return (
     <div className="rounded-xl border border-primary/10 bg-card p-5">
       <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-        Trial balance breakdown
+        Support and Workpapers
       </h3>
       <p className="mt-1 text-xs text-foreground/60">
         Source documents and workpapers organized by financial-statement line
