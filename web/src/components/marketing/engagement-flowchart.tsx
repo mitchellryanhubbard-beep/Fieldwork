@@ -176,20 +176,19 @@ function SideArrow({
             viewBox="0 0 14 14"
             refX="12"
             refY="7"
-            markerWidth="14"
-            markerHeight="14"
+            markerWidth="9"
+            markerHeight="9"
             orient="auto-start-reverse"
           >
-            {/* Hand-drawn-style arrowhead: wider spread, longer wings,
-                slight curve at the back so the tips flick out instead of
-                meeting cleanly. Closer to a sketched arrow than a tidy
-                geometric chevron. */}
+            {/* Ink-style arrowhead — solid filled silhouette with a
+                concave back so the tip reads as a single bold gesture
+                rather than two thin strokes. Matches the reference
+                hand-drawn arrow's chunky filled head. */}
             <path
-              d="M 0 0 Q 7 3 12 7 Q 7 11 0 14"
-              fill="none"
+              d="M 0 0 Q 6 3 12 7 Q 6 11 0 14 L 4 7 Z"
+              fill="currentColor"
               stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
+              strokeWidth={0.8}
               strokeLinejoin="round"
             />
           </marker>
@@ -249,20 +248,19 @@ function ForkArrow({
             viewBox="0 0 14 14"
             refX="12"
             refY="7"
-            markerWidth="14"
-            markerHeight="14"
+            markerWidth="9"
+            markerHeight="9"
             orient="auto-start-reverse"
           >
-            {/* Hand-drawn-style arrowhead: wider spread, longer wings,
-                slight curve at the back so the tips flick out instead of
-                meeting cleanly. Closer to a sketched arrow than a tidy
-                geometric chevron. */}
+            {/* Ink-style arrowhead — solid filled silhouette with a
+                concave back so the tip reads as a single bold gesture
+                rather than two thin strokes. Matches the reference
+                hand-drawn arrow's chunky filled head. */}
             <path
-              d="M 0 0 Q 7 3 12 7 Q 7 11 0 14"
-              fill="none"
+              d="M 0 0 Q 6 3 12 7 Q 6 11 0 14 L 4 7 Z"
+              fill="currentColor"
               stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
+              strokeWidth={0.8}
               strokeLinejoin="round"
             />
           </marker>
