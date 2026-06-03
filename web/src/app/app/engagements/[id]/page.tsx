@@ -5,14 +5,8 @@ import { FileUpload } from "@/components/file-upload";
 import { GenerateBinderButton } from "@/components/generate-binder-button";
 import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
-import { WorkpapersSection } from "@/components/workpapers-section";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
-import { listScopedAccountsForWorkpapers } from "@/lib/account-workpaper-listing";
-import { listGeneratedWorkpaperAcctNums } from "@/lib/account-workpaper-generator";
-import { listGeneratedConfirmationAcctNums } from "@/lib/confirmation-requests-generator";
-import { listPyWorkpapers, type PyWorkpaper } from "@/lib/py-workpaper-repo";
-import { findFsli } from "@/lib/workpaper-binder";
 import { loadVerification, type VerificationRecord } from "@/lib/intake/storage";
 import {
   KIND_LABELS,
@@ -50,34 +44,9 @@ export default async function EditEngagementPage({
   const detail = await getEngagement(id);
   if (!detail) notFound();
 
-  const [
-    arAccounts,
-    generatedAcctNums,
-    generatedConfirmationAcctNums,
-    verifications,
-    pyWorkpapers,
-  ] = await Promise.all([
-    listScopedAccountsForWorkpapers(id),
-    listGeneratedWorkpaperAcctNums(id),
-    listGeneratedConfirmationAcctNums(id),
-    Promise.all(
-      PARSEABLE_KINDS.map(async (k) => [k, await loadVerification(id, k)] as const),
-    ).then((entries) => Object.fromEntries(entries)),
-    listPyWorkpapers(id),
-  ]);
-
-  // Group PY workpapers by FSLI so each scoped account can show its
-  // matching set under the collapsible. Each account's FSLI comes from
-  // findFsli on the acctNum — see workpaper-binder.ts.
-  const pyWorkpapersByFsli: Record<string, PyWorkpaper[]> = {};
-  for (const py of pyWorkpapers) {
-    if (!py.fsli) continue;
-    (pyWorkpapersByFsli[py.fsli] ??= []).push(py);
-  }
-  const fsliByAcctNum: Record<string, string> = {};
-  for (const a of arAccounts) {
-    fsliByAcctNum[a.acctNum] = findFsli(a.acctNum, a.name);
-  }
+  const verifications = await Promise.all(
+    PARSEABLE_KINDS.map(async (k) => [k, await loadVerification(id, k)] as const),
+  ).then((entries) => Object.fromEntries(entries));
 
   // Verification gate — build a friendly "blocking" reason per generator
   // so the buttons can disable + show a tooltip when an upload is pending
@@ -85,15 +54,6 @@ export default async function EditEngagementPage({
   // source of truth; this just keeps the UI honest about why a button is
   // grey.
   const binderBlocker = blockingReason(verifications, ["cy_tb"]);
-  const workpaperBlocker = blockingReason(verifications, [
-    "cy_tb",
-    "ar_aging",
-    "subsequent_cash_receipts",
-  ]);
-  const confirmationsBlocker = blockingReason(verifications, [
-    "cy_tb",
-    "ar_aging",
-  ]);
 
   async function handleUpdate({ values }: { values: EngagementFormValues }) {
     "use server";
@@ -225,28 +185,14 @@ export default async function EditEngagementPage({
         <NumberedSection
           n={7}
           title="Workpapers"
-          description="PY files can be uploaded for reference or rolled forward into the CY pane."
+          description="PY files can be uploaded for reference or rolled forward into the CY pane. Each scoped account gets its own workpaper and confirmation request set."
         >
-          <WorkpapersSection
-            engagementId={id}
-            accounts={arAccounts}
-            generatedAcctNums={Array.from(generatedAcctNums)}
-            generatedConfirmationAcctNums={Array.from(
-              generatedConfirmationAcctNums,
-            )}
-            hasArAging={
-              !!detail.arAgingFile && detail.arAgingFile.sizeBytes > 0
-            }
-            hasTrialBalance={
-              !!detail.cyTrialBalanceFile &&
-              detail.cyTrialBalanceFile.sizeBytes > 0
-            }
-            pyWorkpapers={pyWorkpapers}
-            pyWorkpapersByFsli={pyWorkpapersByFsli}
-            fsliByAcctNum={fsliByAcctNum}
-            workpaperBlockedReason={workpaperBlocker}
-            confirmationsBlockedReason={confirmationsBlocker}
-          />
+          <Link
+            href={`/app/engagements/${id}/workpapers`}
+            className={`${buttonVariants({ variant: "gold" })} w-fit`}
+          >
+            Open workpapers →
+          </Link>
         </NumberedSection>
       </div>
     </main>

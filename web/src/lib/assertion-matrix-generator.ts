@@ -2,7 +2,6 @@ import { DEFAULT_CLAUDE_MODEL, getClaudeClient } from "@/lib/claude";
 import {
   downloadEngagementFile,
   exportEngagement,
-  getEngagement,
 } from "@/lib/engagement-repo";
 import {
   ASSERTION_MATRIX_JSON_SCHEMA,
@@ -59,25 +58,20 @@ export async function generateAssertionMatrix(
   // generation. PDF only; other types fall through with a surfaced note.
   let pyAudit: PyAuditAttachment | undefined;
   let pyAuditError: string | null = null;
-  const detail = await getEngagement(engagementId);
-  const pyMeta = detail?.pyAuditFile ?? null;
-  if (pyMeta) {
-    if (pyMeta.contentType === "application/pdf") {
-      try {
-        const bytes = await downloadEngagementFile(pyMeta.storagePath);
-        pyAudit = {
-          bytes,
-          contentType: pyMeta.contentType,
-          filename: pyMeta.originalFilename,
-        };
-      } catch (err) {
-        pyAuditError = `PY audit download failed: ${err instanceof Error ? err.message : String(err)}`;
-      }
-    } else {
-      pyAuditError = `PY audit content-type ${pyMeta.contentType} not supported — upload a PDF to feed it into the matrix.`;
+  const pyMeta = engagement.pyAuditFile;
+  if (pyMeta.contentType === "application/pdf") {
+    try {
+      const bytes = await downloadEngagementFile(pyMeta.storagePath);
+      pyAudit = {
+        bytes,
+        contentType: pyMeta.contentType,
+        filename: pyMeta.originalFilename,
+      };
+    } catch (err) {
+      pyAuditError = `PY audit download failed: ${err instanceof Error ? err.message : String(err)}`;
     }
   } else {
-    pyAuditError = "PY audit file not uploaded.";
+    pyAuditError = `PY audit content-type ${pyMeta.contentType} not supported — upload a PDF to feed it into the matrix.`;
   }
 
   const client = getClaudeClient();
