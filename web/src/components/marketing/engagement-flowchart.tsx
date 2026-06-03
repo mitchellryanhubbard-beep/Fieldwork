@@ -149,16 +149,12 @@ function SideArrow({
     side === "right"
       ? { left: "calc(100% + 6px)" }
       : { right: "calc(100% + 6px)" };
-  // Three paths drawn as one stroke: the curved body and two
-  // asymmetric wings of the arrowhead. Wings deliberately differ in
-  // angle + length so the tip reads as drawn-by-hand instead of
-  // mathematically reflected.
   const bodyPath =
-    side === "right" ? "M 4 0 Q 62 26 6 52" : "M 66 0 Q 8 26 64 52";
-  const leftWingPath =
-    side === "right" ? "M -3 41 L 6 52" : "M 55 44 L 64 52";
-  const rightWingPath =
-    side === "right" ? "M 15 45 L 6 52" : "M 73 41 L 64 52";
+    side === "right" ? "M 4 0 Q 60 26 4 52" : "M 66 0 Q 10 26 66 52";
+  // Arrowhead drawn as a single stroke that runs wing → tip → wing so
+  // the corner rounds cleanly at the tip with strokeLinejoin="round".
+  const headPath =
+    side === "right" ? "M -3 43 L 4 52 L 11 43" : "M 59 43 L 66 52 L 73 43";
   return (
     <span
       aria-hidden="true"
@@ -178,13 +174,12 @@ function SideArrow({
         <g
           fill="none"
           stroke="currentColor"
-          strokeWidth={3.5}
+          strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"
         >
           <path d={bodyPath} />
-          <path d={leftWingPath} />
-          <path d={rightWingPath} />
+          <path d={headPath} />
         </g>
       </svg>
     </span>
@@ -203,17 +198,12 @@ function ForkArrow({
   side: "left" | "right";
   index: number;
 }) {
-  // Body + two arrowhead wings drawn as three separate stroked paths.
-  // Wings differ slightly in angle + length so the tip looks like a
-  // sketched flick rather than a perfect reflection.
   const bodyPath =
     side === "left"
-      ? "M 180 0 C 120 0 22 28 22 56"
-      : "M 0 0 C 60 0 158 28 158 56";
-  const leftWingPath =
-    side === "left" ? "M 13 47 L 22 56" : "M 149 47 L 158 56";
-  const rightWingPath =
-    side === "left" ? "M 31 49 L 22 56" : "M 167 50 L 158 56";
+      ? "M 180 0 C 130 0 22 26 22 56"
+      : "M 0 0 C 50 0 158 26 158 56";
+  const headPath =
+    side === "left" ? "M 14 47 L 22 56 L 30 47" : "M 150 47 L 158 56 L 166 47";
   const positionStyle =
     side === "left"
       ? { right: "calc(50% + 4px)" }
@@ -232,13 +222,12 @@ function ForkArrow({
         <g
           fill="none"
           stroke="currentColor"
-          strokeWidth={3.5}
+          strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"
         >
           <path d={bodyPath} />
-          <path d={leftWingPath} />
-          <path d={rightWingPath} />
+          <path d={headPath} />
         </g>
       </svg>
     </span>
