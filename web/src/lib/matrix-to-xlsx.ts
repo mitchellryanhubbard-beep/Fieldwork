@@ -132,13 +132,30 @@ export async function matrixToXlsx(matrix: AssertionMatrix): Promise<Buffer> {
     notesSheet.addRow({});
     const notesHeader = notesSheet.addRow({ k: "Model notes (caveats)", v: "" });
     notesHeader.font = { bold: true };
-    const notesCell = notesSheet.addRow({ k: "", v: matrix.notes });
-    notesCell.alignment = { vertical: "top", wrapText: true };
-    notesCell.height = Math.max(matrix.notes.split("\n").length * 18, 120);
+    const notesRow = notesSheet.addRow({ k: "", v: matrix.notes });
+    notesRow.alignment = { vertical: "top", wrapText: true };
+    notesRow.height = computeWrappedRowHeight(matrix.notes, 100);
   }
 
   const arrayBuffer = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);
+}
+
+// Approximates the row height needed to display `text` wrapped at the given
+// column width without truncation. Counts explicit newlines plus the wrap
+// span of each line (charsPerLine ≈ Excel column width in default font).
+// Excel default row line height is ~15 points; pad slightly for descenders.
+function computeWrappedRowHeight(text: string, charsPerLine: number): number {
+  const LINE_HEIGHT = 15.5;
+  const PADDING = 8;
+  const MIN_HEIGHT = 60;
+  const wrappedLines = text
+    .split("\n")
+    .reduce(
+      (acc, line) => acc + Math.max(1, Math.ceil(line.length / charsPerLine)),
+      0,
+    );
+  return Math.max(wrappedLines * LINE_HEIGHT + PADDING, MIN_HEIGHT);
 }
 
 type MatrixRowFlat = {
