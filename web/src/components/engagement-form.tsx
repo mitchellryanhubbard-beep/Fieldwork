@@ -108,7 +108,7 @@ export function EngagementForm({
       <NumberedSection
         n={n0}
         title="Client Information"
-        description="Input client, fiscal year end, framework, and industry to drive industry-specific templates and assertion-risk mapping downstream."
+        description="Input client name, fiscal year end, framework, and industry to drive industry-specific templates and assertion-risk mapping downstream."
       >
         <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-2">
           <Field
