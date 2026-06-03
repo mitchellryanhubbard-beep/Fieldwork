@@ -111,23 +111,25 @@ function FlowCard({ n, title, body }: Step) {
   );
 }
 
+// Shared chevron tip geometry — 10 wide × 5 deep, drawn pointing down
+// from a vertical stem. Used by both DownArrow and the YBranch legs so
+// the tip looks identical everywhere.
+const TIP_PATH = "M -5 -5 L 0 0 L 5 -5";
+
 function DownArrow() {
   return (
     <div aria-hidden="true" className="flex justify-center py-1.5">
-      <svg
-        viewBox="0 0 14 22"
-        width="14"
-        height="22"
-        className="text-primary/35"
-      >
-        <path
-          d="M 7 0 L 7 16 M 2 12 L 7 19 L 12 12"
+      <svg viewBox="0 0 14 22" width="14" height="22" className="text-accent">
+        <g
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-        />
+        >
+          <path d="M 7 0 L 7 19" />
+          <path d={TIP_PATH} transform="translate(7 19)" />
+        </g>
       </svg>
     </div>
   );
@@ -139,37 +141,22 @@ function YBranch() {
       <svg
         viewBox="0 0 400 56"
         preserveAspectRatio="none"
-        className="h-14 w-full max-w-2xl text-primary/35"
+        className="h-14 w-full max-w-2xl text-accent"
       >
-        {/* Stem down from center, horizontal bridge, then two legs
-            ending in arrowheads above each child card. */}
-        <path
-          d="M 200 0 L 200 18 M 60 18 L 340 18 M 60 18 L 60 50 M 340 18 L 340 50"
+        <g
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d="M 55 45 L 60 50 L 65 45"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d="M 335 45 L 340 50 L 345 45"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
+        >
+          {/* Stem down from center, horizontal bridge, then two legs. */}
+          <path d="M 200 0 L 200 18 M 60 18 L 340 18 M 60 18 L 60 50 M 340 18 L 340 50" />
+          {/* Identical chevron tips at the foot of each leg. */}
+          <path d={TIP_PATH} transform="translate(60 50)" />
+          <path d={TIP_PATH} transform="translate(340 50)" />
+        </g>
       </svg>
     </div>
   );
