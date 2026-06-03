@@ -69,7 +69,7 @@ export function ProblemBlock() {
         What first-year staff actually spend time on.
       </SectionHeading>
       <p className="mt-3 max-w-xl text-foreground/70">
-        Most of fieldwork is rote work that doesn&apos;t need judgment.
+        Most fieldwork is rote work that doesn&apos;t need judgment.
         Illustrative breakdown of a typical mid-market private audit.
       </p>
 
