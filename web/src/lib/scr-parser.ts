@@ -59,26 +59,19 @@ export async function parseSubsequentCashReceipts(
     return { periodLabel, receipts: invoiceReceipts, totalReceived: total };
   }
 
-  // 2) Bank-statement layout with separate Debit (deposits) + Credit
-  //    (payments) columns. We treat every Debit row as a receipt and
-  //    ignore Credit rows (those are cash *out*, not subsequent
-  //    receipts). Invoice linkage isn't available in this format.
-  const bankReceipts = parseBankStatementDebitCredit(sheet);
-  if (bankReceipts.length > 0) {
-    const total = bankReceipts.reduce((a, r) => a + r.amountReceived, 0);
-    return { periodLabel, receipts: bankReceipts, totalReceived: total };
-  }
-
-  // 3) Single signed-amount column (e.g., positive = receipt, negative
-  //    = refund). We keep only positive amounts.
-  const signedReceipts = parseSignedAmountColumn(sheet);
-  if (signedReceipts.length > 0) {
-    const total = signedReceipts.reduce((a, r) => a + r.amountReceived, 0);
-    return { periodLabel, receipts: signedReceipts, totalReceived: total };
+  // 2) Flexible fallback — covers anything else with a sensible header
+  //    row: bank statements (Debit + Credit pair), customer-deposit
+  //    details (Date + Amount + Customer + Invoice), single signed
+  //    Amount columns, etc. Maps columns by keyword and extracts
+  //    whatever it can find.
+  const flexReceipts = parseFlexibleSCR(sheet);
+  if (flexReceipts.length > 0) {
+    const total = flexReceipts.reduce((a, r) => a + r.amountReceived, 0);
+    return { periodLabel, receipts: flexReceipts, totalReceived: total };
   }
 
   throw new Error(
-    "SCR xlsx layout was not recognised. Expected an invoice-application schedule (Receipt # | Customer | Invoice | Amount Received …), a bank-statement detail with Debit + Credit columns, or a single signed Amount column.",
+    "SCR xlsx layout was not recognised. Could not locate a header row with a date column and an amount column (or a Debit/Credit pair). Try renaming columns to include keywords like 'Date', 'Customer', 'Amount', or 'Deposit/Payment'.",
   );
 }
 
@@ -125,161 +118,162 @@ function parseInvoiceApplication(sheet: ExcelJS.Worksheet): ScrReceipt[] {
   return receipts;
 }
 
-// Marigold layout: bank-statement detail. One Debit column (deposits =
-// cash in = receipts) and one Credit column (payments = cash out). We
-// build a synthetic receipt per Debit row using the date, payee/source,
-// and ref. Credit rows are dropped — they aren't subsequent receipts.
-function parseBankStatementDebitCredit(
-  sheet: ExcelJS.Worksheet,
-): ScrReceipt[] {
-  const header = findHeaderRow(sheet, (h) => {
-    const has = (re: RegExp) =>
-      Array.from(h.values()).some((cell) => re.test(cell));
-    return (
-      has(/^date\b/i) &&
-      has(/\b(debit|deposit|dr)\b/i) &&
-      has(/\b(credit|payment|cr)\b/i)
-    );
-  });
+// Flexible fallback. One heuristic parser that handles anything with a
+// recognisable header row + a numeric "amount source" column (either a
+// single Amount column or a Debit/Credit pair). The point isn't to be
+// rigid about which auditor schedule was uploaded — it's to extract
+// receipts from whatever structured spreadsheet the client provided.
+//
+// Header detection: scans the top 20 rows for one with at least a date
+// column, an amount-ish column, and a customer or invoice or ref
+// column. The chosen row anchors the data scan below.
+//
+// Column mapping: assigns each header cell to the first matching slot
+// in priority order (date > customer > invoice > debit > credit >
+// amount > ref > method). The order matters — "Deposit Date" should
+// claim the date slot, not the debit slot, so date is matched first.
+//
+// Amount source: if Debit + Credit are both found, treat every row
+// where debit > 0 as a receipt (credit-only rows are cash out and get
+// dropped). Otherwise read from the single Amount column and drop
+// non-positive rows.
+//
+// Subtotal / Total / Auditor-note rows are filtered by checking the
+// customer cell and the first text cell on the row.
+function parseFlexibleSCR(sheet: ExcelJS.Worksheet): ScrReceipt[] {
+  const header = findFlexibleHeader(sheet);
   if (header == null) return [];
 
-  const map = mapBankColumns(sheet, header);
-  if (map.date == null || map.debit == null) return [];
+  const map = mapFlexibleColumns(sheet, header);
+  if (map.date == null) return [];
+  const hasDebitCredit = map.debit != null;
+  const hasSingleAmount = map.amount != null;
+  if (!hasDebitCredit && !hasSingleAmount) return [];
 
   const receipts: ScrReceipt[] = [];
   for (let r = header + 1; r <= sheet.rowCount; r++) {
-    const debit = readNumber(sheet, r, map.debit);
-    if (debit <= 0) continue; // skip credits (cash out) and empty rows
+    let amount: number;
+    if (hasDebitCredit) {
+      const debit = readNumber(sheet, r, map.debit as number);
+      if (debit <= 0) continue;
+      amount = debit;
+    } else {
+      amount = readNumber(sheet, r, map.amount as number);
+      if (amount <= 0) continue;
+    }
+
+    const customer =
+      map.customer != null ? readText(sheet, r, map.customer).trim() : "";
+    const firstText = readText(sheet, r, 1).trim();
+    if (isNonDataRow(customer) || isNonDataRow(firstText)) continue;
 
     const date = parseDateCell(sheet.getRow(r).getCell(map.date).value);
-    const payee = map.payee != null ? readText(sheet, r, map.payee).trim() : "";
-    const description =
-      map.description != null
-        ? readText(sheet, r, map.description).trim()
-        : "";
     const ref = map.ref != null ? readText(sheet, r, map.ref).trim() : "";
-
-    // Skip header/total/note rows that snuck past the value filter.
-    if (/^total\b/i.test(payee) || /^total\b/i.test(description)) continue;
-
-    receipts.push({
-      receiptNum: ref || `DEP-${date ?? r}`,
-      customerName: payee || description || "(unattributed deposit)",
-      invoiceNum: "",
-      invoiceDate: null,
-      invoiceAmount: 0,
-      receiptDate: date,
-      amountReceived: debit,
-      appliedInFull: false,
-      remainingBalance: 0,
-      notes: description,
-    });
-  }
-  return receipts;
-}
-
-// Single-amount layout: one signed Amount column. Positive = receipt,
-// negative = refund (dropped).
-function parseSignedAmountColumn(
-  sheet: ExcelJS.Worksheet,
-): ScrReceipt[] {
-  const header = findHeaderRow(sheet, (h) => {
-    const has = (re: RegExp) =>
-      Array.from(h.values()).some((cell) => re.test(cell));
-    return (
-      has(/^date\b/i) &&
-      has(/^(amount|received|total)$/i) &&
-      // Disambiguate from the bank-statement layout — only one money
-      // column allowed.
-      !has(/\b(debit|deposit|dr)\b/i) &&
-      !has(/\b(credit|payment|cr)\b/i)
-    );
-  });
-  if (header == null) return [];
-
-  let dateCol: number | null = null;
-  let amountCol: number | null = null;
-  let payeeCol: number | null = null;
-  let refCol: number | null = null;
-  let descCol: number | null = null;
-  const maxCol = Math.min(20, sheet.columnCount);
-  for (let c = 1; c <= maxCol; c++) {
-    const h = readText(sheet, header, c).trim().toLowerCase();
-    if (!h) continue;
-    if (dateCol == null && /^date\b/.test(h)) dateCol = c;
-    else if (amountCol == null && /^(amount|received|total)$/.test(h))
-      amountCol = c;
-    else if (payeeCol == null && /^(payee|source|received from|customer)/.test(h))
-      payeeCol = c;
-    else if (refCol == null && /^(ref|check\s*#|receipt\s*#)/.test(h))
-      refCol = c;
-    else if (descCol == null && /^description/.test(h)) descCol = c;
-  }
-  if (dateCol == null || amountCol == null) return [];
-
-  const receipts: ScrReceipt[] = [];
-  for (let r = header + 1; r <= sheet.rowCount; r++) {
-    const amount = readNumber(sheet, r, amountCol);
-    if (amount <= 0) continue;
-
-    const date = parseDateCell(sheet.getRow(r).getCell(dateCol).value);
-    const payee = payeeCol != null ? readText(sheet, r, payeeCol).trim() : "";
-    const description = descCol != null ? readText(sheet, r, descCol).trim() : "";
-    const ref = refCol != null ? readText(sheet, r, refCol).trim() : "";
-
-    if (/^total\b/i.test(payee) || /^total\b/i.test(description)) continue;
+    const invoice =
+      map.invoice != null ? readText(sheet, r, map.invoice).trim() : "";
+    const method =
+      map.method != null ? readText(sheet, r, map.method).trim() : "";
 
     receipts.push({
       receiptNum: ref || `R-${date ?? r}`,
-      customerName: payee || description || "(unattributed)",
-      invoiceNum: "",
+      customerName: customer || "(unattributed)",
+      invoiceNum: invoice,
       invoiceDate: null,
       invoiceAmount: 0,
       receiptDate: date,
       amountReceived: amount,
       appliedInFull: false,
       remainingBalance: 0,
-      notes: description,
+      notes: method,
     });
   }
   return receipts;
 }
 
-type BankColumns = {
+function isNonDataRow(text: string): boolean {
+  if (!text) return false;
+  return /^(subtotal|total|grand\s+total|auditor\s+note)\b/i.test(text);
+}
+
+function findFlexibleHeader(sheet: ExcelJS.Worksheet): number | null {
+  const maxRow = Math.min(20, sheet.rowCount);
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let r = 1; r <= maxRow; r++) {
+    const cells: string[] = [];
+    for (let c = 1; c <= maxCol; c++) {
+      const h = readText(sheet, r, c).trim().toLowerCase();
+      if (h) cells.push(h);
+    }
+    const hasDate = cells.some((h) => /\bdate\b/.test(h));
+    const hasAmountish = cells.some((h) =>
+      /\b(amount|received|total|debit|credit|deposit|payment|dr|cr)\b/.test(h),
+    );
+    const hasContext = cells.some((h) =>
+      /^(customer|payer|payee|received from|source|invoice)/.test(h) ||
+      /\b(ref|batch|check|receipt\s*#)\b/.test(h),
+    );
+    if (hasDate && hasAmountish && hasContext) return r;
+  }
+  return null;
+}
+
+type FlexibleColumns = {
   date?: number;
-  payee?: number;
-  description?: number;
-  ref?: number;
+  customer?: number;
+  invoice?: number;
+  amount?: number;
   debit?: number;
   credit?: number;
+  ref?: number;
+  method?: number;
 };
 
-function mapBankColumns(
+function mapFlexibleColumns(
   sheet: ExcelJS.Worksheet,
   headerRow: number,
-): BankColumns {
-  const map: BankColumns = {};
+): FlexibleColumns {
+  const map: FlexibleColumns = {};
   const maxCol = Math.min(20, sheet.columnCount);
   for (let c = 1; c <= maxCol; c++) {
     const h = readText(sheet, headerRow, c).trim().toLowerCase();
     if (!h) continue;
-    if (map.date == null && /^date\b/.test(h)) map.date = c;
-    else if (
-      map.payee == null &&
-      /^(payee|source|received from|customer|payee\s*\/\s*source)/.test(h)
-    )
-      map.payee = c;
-    else if (map.description == null && /^description/.test(h))
-      map.description = c;
-    else if (
-      map.ref == null &&
-      /^(ref|check|ref\s*\/\s*check)/.test(h)
-    )
-      map.ref = c;
-    else if (map.debit == null && /\b(debit|deposit|dr)\b/.test(h))
+    // Priority order — first match wins. Date must outrank debit so
+    // that a "Deposit Date" header claims the date slot, not the debit
+    // slot.
+    if (map.date == null && /\bdate\b/.test(h)) {
+      map.date = c;
+    } else if (
+      map.customer == null &&
+      /^(customer|payer|payee|received from|source|payee\s*\/\s*source)/.test(h)
+    ) {
+      map.customer = c;
+    } else if (map.invoice == null && /^invoice/.test(h)) {
+      map.invoice = c;
+    } else if (
+      map.debit == null &&
+      /\b(debit|deposit|dr)\b/.test(h) &&
+      !/\bdate\b/.test(h)
+    ) {
       map.debit = c;
-    else if (map.credit == null && /\b(credit|payment|cr)\b/.test(h))
+    } else if (
+      map.credit == null &&
+      /\b(credit|cr|payment)\b/.test(h)
+    ) {
       map.credit = c;
+    } else if (
+      map.amount == null &&
+      /\b(amount|received|total)\b/.test(h) &&
+      !/\b(remaining|running)\s*balance\b/.test(h)
+    ) {
+      map.amount = c;
+    } else if (
+      map.ref == null &&
+      /\b(ref|batch|check\s*#|receipt\s*#)\b/.test(h)
+    ) {
+      map.ref = c;
+    } else if (map.method == null && /\b(method|type)\b/.test(h)) {
+      map.method = c;
+    }
   }
   return map;
 }
