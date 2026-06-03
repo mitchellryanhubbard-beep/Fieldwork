@@ -44,10 +44,16 @@ export async function parseTrialBalance(
 
   const clientName = readCellText(sheet, 1, 1) || "Unknown client";
 
+  // Detect which columns are CY vs PY by scanning the header row(s).
+  // Defaults to col 3 = CY, col 4 = PY (Hartwell layout). Marigold's
+  // template ships PY in col 3 and CY in col 4 — without this scan we
+  // were silently swapping the two balances per account.
+  const layout = detectBalanceColumns(sheet);
+
   const accounts: TrialBalanceAccount[] = [];
   let section: TrialBalanceAccount["section"] | null = null;
 
-  for (let r = 3; r <= sheet.rowCount; r++) {
+  for (let r = layout.firstDataRow; r <= sheet.rowCount; r++) {
     const acctNum = readCellText(sheet, r, 1).trim();
     const accountName = readCellText(sheet, r, 2).trim();
 
@@ -73,8 +79,8 @@ export async function parseTrialBalance(
     }
     if (!effectiveSection) continue;
 
-    const cyBalance = readCellNumber(sheet, r, 3);
-    const pyBalance = readCellNumber(sheet, r, 4);
+    const cyBalance = readCellNumber(sheet, r, layout.cyCol);
+    const pyBalance = readCellNumber(sheet, r, layout.pyCol);
     const materialityScoping = readCellText(sheet, r, 7).trim();
     const pyExceptionNote = readCellText(sheet, r, 8).trim();
 
@@ -176,6 +182,38 @@ function inferSectionFromAcctNum(
   if (first === "4") return "Revenue";
   if (first === "5" || first === "6") return "Expense";
   return null;
+}
+
+// Walks the top of the sheet looking for a header row that has both a
+// CY-tagged and a PY-tagged column so the parser doesn't silently
+// swap balances when a client ships its TB with PY on the left and CY
+// on the right (Marigold) instead of the Hartwell layout. Falls back
+// to the Hartwell defaults (CY in col 3, PY in col 4, data starting
+// row 3) when no clear header is found.
+function detectBalanceColumns(sheet: ExcelJS.Worksheet): {
+  cyCol: number;
+  pyCol: number;
+  firstDataRow: number;
+} {
+  const maxScanRow = Math.min(10, sheet.rowCount);
+  const maxScanCol = Math.min(12, sheet.columnCount);
+  for (let r = 1; r <= maxScanRow; r++) {
+    let cyCol = -1;
+    let pyCol = -1;
+    for (let c = 1; c <= maxScanCol; c++) {
+      const text = readCellText(sheet, r, c).toLowerCase();
+      if (!text) continue;
+      if (cyCol === -1 && /\bcy\b|current\s+year/.test(text)) {
+        cyCol = c;
+      } else if (pyCol === -1 && /\bpy\b|prior\s+year/.test(text)) {
+        pyCol = c;
+      }
+    }
+    if (cyCol !== -1 && pyCol !== -1) {
+      return { cyCol, pyCol, firstDataRow: r + 1 };
+    }
+  }
+  return { cyCol: 3, pyCol: 4, firstDataRow: 3 };
 }
 
 // Render the TB as a compact text block to inject into the matrix prompt.
