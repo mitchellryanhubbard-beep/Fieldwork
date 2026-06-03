@@ -79,15 +79,12 @@ const FileReferenceSchema = z.object({
   uploadedAt: z.string().datetime({ offset: true }),
 });
 
-const RiskItemSchema = z.object({
-  category: z.enum(RISK_CATEGORIES),
-  description: z.string().min(1).max(4000),
+const AnswerSchema = z.object({
+  value: z.string().max(10000),
+  description: z.string().max(10000),
 });
 
-const BusinessChangeItemSchema = z.object({
-  category: z.enum(BUSINESS_CHANGE_CATEGORIES),
-  description: z.string().min(1).max(4000),
-});
+const QuestionnaireAnswersSchema = z.record(z.string(), AnswerSchema);
 
 export const EngagementSetupSchema = z
   .object({
@@ -102,14 +99,7 @@ export const EngagementSetupSchema = z
     industry: z.enum(INDUSTRIES),
     pyAuditFile: FileReferenceSchema,
     cyTrialBalanceFile: FileReferenceSchema,
-    cyRiskProfile: z.object({
-      narrative: z.string().max(10000).optional(),
-      items: z.array(RiskItemSchema),
-    }),
-    cyBusinessChanges: z.object({
-      narrative: z.string().max(10000).optional(),
-      items: z.array(BusinessChangeItemSchema),
-    }),
+    planningQuestionnaire: QuestionnaireAnswersSchema,
     materiality: z.object({
       currency: z.literal("USD"),
       overallMateriality: z.number().positive(),
@@ -133,10 +123,7 @@ export const EngagementFormSchema = z
     reportingPeriodStart: z.string().date().or(z.literal("")).optional(),
     framework: z.enum(FRAMEWORKS),
     industry: z.enum(INDUSTRIES),
-    riskNarrative: z.string().max(10000).optional(),
-    riskItems: z.array(RiskItemSchema),
-    businessChangesNarrative: z.string().max(10000).optional(),
-    businessChangeItems: z.array(BusinessChangeItemSchema),
+    planningQuestionnaire: QuestionnaireAnswersSchema,
     overallMateriality: z.coerce.number().positive(
       "Overall materiality must be greater than 0",
     ),

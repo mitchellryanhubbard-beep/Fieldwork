@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm, type Resolver } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
@@ -13,11 +13,12 @@ import {
   FRAMEWORK_LABELS,
   INDUSTRIES,
   INDUSTRY_LABELS,
-  RISK_CATEGORIES,
-  RISK_CATEGORY_LABELS,
-  BUSINESS_CHANGE_CATEGORIES,
-  BUSINESS_CHANGE_CATEGORY_LABELS,
 } from "@/lib/engagement-schema";
+import {
+  PLANNING_QUESTIONNAIRE,
+  emptyQuestionnaireAnswers,
+  type Question,
+} from "@/lib/planning-questionnaire";
 
 import { Button } from "@/components/ui/button";
 import { NumberedSection } from "@/components/numbered-section";
@@ -56,10 +57,7 @@ const EMPTY_DEFAULTS: EngagementFormValues = {
   reportingPeriodStart: "",
   framework: "AICPA",
   industry: "Manufacturing",
-  riskNarrative: "",
-  riskItems: [],
-  businessChangesNarrative: "",
-  businessChangeItems: [],
+  planningQuestionnaire: emptyQuestionnaireAnswers(),
   overallMateriality: 0,
   performanceMateriality: 0,
   clearlyTrivialThreshold: 0,
@@ -81,17 +79,14 @@ export function EngagementForm({
     defaultValues: {
       ...EMPTY_DEFAULTS,
       ...defaultValues,
+      // Always seed every question slot so the UI has something to bind.
+      // Saved answers override; new questions added later get blank slots.
+      planningQuestionnaire: {
+        ...emptyQuestionnaireAnswers(),
+        ...(defaultValues?.planningQuestionnaire ?? {}),
+      },
     },
     mode: "onBlur",
-  });
-
-  const riskItems = useFieldArray({
-    control: form.control,
-    name: "riskItems",
-  });
-  const businessChangeItems = useFieldArray({
-    control: form.control,
-    name: "businessChangeItems",
   });
 
   const onSubmit = form.handleSubmit((values) => {
@@ -229,142 +224,22 @@ export function EngagementForm({
 
       <NumberedSection
         n={n0 + 2}
-        title="CY Risk Profile"
-        description="Identified risks for the current year. Each item is consumed by the assertion-risk matrix."
+        title="Planning & Risk Questionnaire"
+        description="Identify current-year significant business changes, identify CY audit risks, and give the AI context to modify the audit approach from PY."
       >
-        <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5">
-          <Field label="Narrative (optional)">
-            <Textarea rows={3} {...form.register("riskNarrative")} />
-          </Field>
-          <div className="space-y-3">
-            {riskItems.fields.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No risks yet.</p>
-            ) : null}
-            {riskItems.fields.map((field, index) => (
-              <div
-                key={field.id}
-                className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[200px_1fr_auto]"
-              >
-                <Select
-                  value={form.watch(`riskItems.${index}.category`)}
-                  onValueChange={(v) =>
-                    form.setValue(
-                      `riskItems.${index}.category`,
-                      v as (typeof RISK_CATEGORIES)[number],
-                      { shouldDirty: true },
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RISK_CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {RISK_CATEGORY_LABELS[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  rows={2}
-                  placeholder="Describe the risk"
-                  {...form.register(`riskItems.${index}.description`)}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => riskItems.remove(index)}
-                >
-                  Remove
-                </Button>
+        <div className="space-y-6 rounded-xl border border-primary/10 bg-card p-5">
+          {PLANNING_QUESTIONNAIRE.map((group) => (
+            <div key={group.title} className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                {group.title}
+              </h3>
+              <div className="space-y-4">
+                {group.questions.map((q) => (
+                  <QuestionRow key={q.id} question={q} form={form} />
+                ))}
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                riskItems.append({ category: "Other", description: "" })
-              }
-            >
-              + Add risk
-            </Button>
-          </div>
-        </div>
-      </NumberedSection>
-
-      <NumberedSection
-        n={n0 + 3}
-        title="CY Significant Business Changes"
-        description="Material changes since the prior year — management, systems, M&A, new products, etc."
-      >
-        <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5">
-          <Field label="Narrative (optional)">
-            <Textarea rows={3} {...form.register("businessChangesNarrative")} />
-          </Field>
-          <div className="space-y-3">
-            {businessChangeItems.fields.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No changes yet.</p>
-            ) : null}
-            {businessChangeItems.fields.map((field, index) => (
-              <div
-                key={field.id}
-                className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[220px_1fr_auto]"
-              >
-                <Select
-                  value={form.watch(`businessChangeItems.${index}.category`)}
-                  onValueChange={(v) =>
-                    form.setValue(
-                      `businessChangeItems.${index}.category`,
-                      v as (typeof BUSINESS_CHANGE_CATEGORIES)[number],
-                      { shouldDirty: true },
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BUSINESS_CHANGE_CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {BUSINESS_CHANGE_CATEGORY_LABELS[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  rows={2}
-                  placeholder="Describe the change"
-                  {...form.register(
-                    `businessChangeItems.${index}.description`,
-                  )}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => businessChangeItems.remove(index)}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                businessChangeItems.append({
-                  category: "Other",
-                  description: "",
-                })
-              }
-            >
-              + Add change
-            </Button>
-          </div>
+            </div>
+          ))}
         </div>
       </NumberedSection>
 
@@ -406,6 +281,74 @@ function Field({
       </Label>
       {children}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+// One row of the Planning & Risk Questionnaire. "text" questions render a
+// single textarea. "yesNo" questions render a No/Yes radio pair with a
+// follow-up "Describe:" textarea that only appears when Yes is selected.
+function QuestionRow({
+  question,
+  form,
+}: {
+  question: Question;
+  form: ReturnType<typeof useForm<EngagementFormValues>>;
+}) {
+  const valuePath = `planningQuestionnaire.${question.id}.value` as const;
+  const descPath =
+    `planningQuestionnaire.${question.id}.description` as const;
+
+  if (question.kind === "text") {
+    return (
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium text-primary">{question.prompt}</p>
+        <Textarea
+          rows={3}
+          placeholder={question.placeholder}
+          {...form.register(valuePath)}
+        />
+      </div>
+    );
+  }
+
+  const current = form.watch(valuePath);
+  const showDescribe = current === "yes";
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-primary">{question.prompt}</p>
+      {question.examples ? (
+        <p className="text-xs text-foreground/60">
+          Examples: {question.examples.join(" · ")}
+        </p>
+      ) : null}
+      <div className="flex items-center gap-5 text-sm">
+        <label className="inline-flex items-center gap-1.5">
+          <input
+            type="radio"
+            value="no"
+            className="size-3.5 accent-primary"
+            {...form.register(valuePath)}
+          />
+          No
+        </label>
+        <label className="inline-flex items-center gap-1.5">
+          <input
+            type="radio"
+            value="yes"
+            className="size-3.5 accent-primary"
+            {...form.register(valuePath)}
+          />
+          Yes
+        </label>
+      </div>
+      {showDescribe ? (
+        <Textarea
+          rows={2}
+          placeholder="Describe:"
+          {...form.register(descPath)}
+        />
+      ) : null}
     </div>
   );
 }

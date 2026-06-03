@@ -75,20 +75,19 @@ export async function createEngagement(
     reporting_period_start: values.reportingPeriodStart || null,
     framework: values.framework,
     industry: values.industry,
-    risk_narrative: values.riskNarrative ?? null,
-    business_changes_narrative: values.businessChangesNarrative ?? null,
+    // Legacy columns required by the DB schema; their data is no longer
+    // edited via the form (replaced by planning_questionnaire). Will be
+    // dropped in a follow-up migration.
+    risk_narrative: null,
+    business_changes_narrative: null,
     materiality_currency: "USD",
     overall_materiality: values.overallMateriality,
     performance_materiality: values.performanceMateriality,
     clearly_trivial_threshold: values.clearlyTrivialThreshold,
-    // Basis field removed from the UI; column still required by the DB
-    // check constraint, so write a placeholder until the column is dropped.
     materiality_basis: "(not specified)",
+    planning_questionnaire: values.planningQuestionnaire,
   });
   if (insertError) throw new Error(`createEngagement failed: ${insertError.message}`);
-
-  await replaceRiskItems(id, values.riskItems);
-  await replaceBusinessChangeItems(id, values.businessChangeItems);
   return id;
 }
 
@@ -105,71 +104,13 @@ export async function updateEngagement(
       reporting_period_start: values.reportingPeriodStart || null,
       framework: values.framework,
       industry: values.industry,
-      risk_narrative: values.riskNarrative ?? null,
-      business_changes_narrative: values.businessChangesNarrative ?? null,
       overall_materiality: values.overallMateriality,
       performance_materiality: values.performanceMateriality,
       clearly_trivial_threshold: values.clearlyTrivialThreshold,
+      planning_questionnaire: values.planningQuestionnaire,
     })
     .eq("id", id);
   if (error) throw new Error(`updateEngagement failed: ${error.message}`);
-
-  await replaceRiskItems(id, values.riskItems);
-  await replaceBusinessChangeItems(id, values.businessChangeItems);
-}
-
-async function replaceRiskItems(
-  engagementId: string,
-  items: EngagementFormValues["riskItems"],
-) {
-  const sb = getServerSupabase();
-  const { error: deleteError } = await sb
-    .from("engagement_risk_items")
-    .delete()
-    .eq("engagement_id", engagementId);
-  if (deleteError) throw new Error(`replaceRiskItems delete failed: ${deleteError.message}`);
-
-  if (items.length === 0) return;
-  const rows = items.map((item, position) => ({
-    engagement_id: engagementId,
-    category: item.category,
-    description: item.description,
-    position,
-  }));
-  const { error: insertError } = await sb
-    .from("engagement_risk_items")
-    .insert(rows);
-  if (insertError) throw new Error(`replaceRiskItems insert failed: ${insertError.message}`);
-}
-
-async function replaceBusinessChangeItems(
-  engagementId: string,
-  items: EngagementFormValues["businessChangeItems"],
-) {
-  const sb = getServerSupabase();
-  const { error: deleteError } = await sb
-    .from("engagement_business_changes")
-    .delete()
-    .eq("engagement_id", engagementId);
-  if (deleteError)
-    throw new Error(
-      `replaceBusinessChangeItems delete failed: ${deleteError.message}`,
-    );
-
-  if (items.length === 0) return;
-  const rows = items.map((item, position) => ({
-    engagement_id: engagementId,
-    category: item.category,
-    description: item.description,
-    position,
-  }));
-  const { error: insertError } = await sb
-    .from("engagement_business_changes")
-    .insert(rows);
-  if (insertError)
-    throw new Error(
-      `replaceBusinessChangeItems insert failed: ${insertError.message}`,
-    );
 }
 
 export type EngagementDetail = {
@@ -203,28 +144,12 @@ export async function getEngagement(id: string): Promise<EngagementDetail | null
   if (error) throw new Error(`getEngagement failed: ${error.message}`);
   if (!engagement) return null;
 
-  const [riskItemsRes, businessChangeItemsRes, filesRes] = await Promise.all([
-    sb
-      .from("engagement_risk_items")
-      .select("category, description, position")
-      .eq("engagement_id", id)
-      .order("position", { ascending: true }),
-    sb
-      .from("engagement_business_changes")
-      .select("category, description, position")
-      .eq("engagement_id", id)
-      .order("position", { ascending: true }),
-    sb
-      .from("engagement_files")
-      .select("kind, storage_path, original_filename, content_type, size_bytes, uploaded_at")
-      .eq("engagement_id", id),
-  ]);
-  if (riskItemsRes.error)
-    throw new Error(`getEngagement risk items: ${riskItemsRes.error.message}`);
-  if (businessChangeItemsRes.error)
-    throw new Error(
-      `getEngagement business changes: ${businessChangeItemsRes.error.message}`,
-    );
+  const filesRes = await sb
+    .from("engagement_files")
+    .select(
+      "kind, storage_path, original_filename, content_type, size_bytes, uploaded_at",
+    )
+    .eq("engagement_id", id);
   if (filesRes.error)
     throw new Error(`getEngagement files: ${filesRes.error.message}`);
 
@@ -245,16 +170,7 @@ export async function getEngagement(id: string): Promise<EngagementDetail | null
     reportingPeriodStart: engagement.reporting_period_start ?? "",
     framework: engagement.framework,
     industry: engagement.industry,
-    riskNarrative: engagement.risk_narrative ?? "",
-    riskItems: (riskItemsRes.data ?? []).map((row) => ({
-      category: row.category,
-      description: row.description,
-    })),
-    businessChangesNarrative: engagement.business_changes_narrative ?? "",
-    businessChangeItems: (businessChangeItemsRes.data ?? []).map((row) => ({
-      category: row.category,
-      description: row.description,
-    })),
+    planningQuestionnaire: engagement.planning_questionnaire ?? {},
     overallMateriality: Number(engagement.overall_materiality),
     performanceMateriality: Number(engagement.performance_materiality),
     clearlyTrivialThreshold: Number(engagement.clearly_trivial_threshold),
@@ -421,16 +337,7 @@ export async function exportEngagement(id: string): Promise<EngagementSetup> {
     industry: v.industry,
     pyAuditFile: detail.pyAuditFile,
     cyTrialBalanceFile: detail.cyTrialBalanceFile,
-    cyRiskProfile: {
-      ...(v.riskNarrative ? { narrative: v.riskNarrative } : {}),
-      items: v.riskItems,
-    },
-    cyBusinessChanges: {
-      ...(v.businessChangesNarrative
-        ? { narrative: v.businessChangesNarrative }
-        : {}),
-      items: v.businessChangeItems,
-    },
+    planningQuestionnaire: v.planningQuestionnaire,
     materiality: {
       currency: "USD",
       overallMateriality: v.overallMateriality,

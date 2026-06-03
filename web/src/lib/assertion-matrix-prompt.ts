@@ -9,6 +9,7 @@ import {
   trialBalanceToPromptText,
   type TrialBalance,
 } from "@/lib/tb-parser";
+import { PLANNING_QUESTIONNAIRE } from "@/lib/planning-questionnaire";
 
 export type PyAuditAttachment = {
   bytes: Buffer;
@@ -84,35 +85,45 @@ export function buildAssertionMatrixUserMessage(
   );
   lines.push("");
 
-  lines.push("## CY Risk Profile");
-  if (v.cyRiskProfile.narrative) {
-    lines.push(`Narrative: ${v.cyRiskProfile.narrative}`);
+  lines.push("## Planning & Risk Questionnaire");
+  lines.push(
+    "Auditor's CY planning answers — combines business changes, risk",
+    "identification, and audit-approach signals. Treat each 'Yes' answer",
+    "(plus the auditor's Describe text) as a CY risk anchor and cite it in",
+    "the matching matrix row's citation. 'No' answers are informational",
+    "only — they confirm no CY change in that area vs. PY.",
+  );
+  lines.push("");
+  const answers = v.planningQuestionnaire;
+  let anyYes = false;
+  for (const group of PLANNING_QUESTIONNAIRE) {
+    lines.push(`### ${group.title}`);
+    for (const q of group.questions) {
+      const a = answers[q.id];
+      if (q.kind === "text") {
+        const val = (a?.value ?? "").trim();
+        lines.push(`- ${q.prompt}`);
+        lines.push(`  ${val || "(no answer)"}`);
+      } else {
+        const val = (a?.value ?? "").toLowerCase();
+        const desc = (a?.description ?? "").trim();
+        const tag =
+          val === "yes" ? "YES" : val === "no" ? "No" : "(not answered)";
+        if (val === "yes") anyYes = true;
+        lines.push(`- ${q.prompt} → ${tag}`);
+        if (val === "yes" && desc) lines.push(`  Describe: ${desc}`);
+      }
+    }
     lines.push("");
   }
-  if (v.cyRiskProfile.items.length === 0) {
-    lines.push("(No structured risk items supplied.)");
-  } else {
-    v.cyRiskProfile.items.forEach((item, i) => {
-      lines.push(`Risk #${i + 1} [${item.category}]: ${item.description}`);
-    });
-  }
-  lines.push("");
-
-  lines.push("## CY Significant Business Changes");
-  if (v.cyBusinessChanges.narrative) {
-    lines.push(`Narrative: ${v.cyBusinessChanges.narrative}`);
+  if (!anyYes) {
+    lines.push(
+      "(No 'Yes' answers — treat as a low-change year and lean on PY",
+      "audit findings + industry-standard risks rather than CY-specific",
+      "anchors.)",
+    );
     lines.push("");
   }
-  if (v.cyBusinessChanges.items.length === 0) {
-    lines.push("(No structured business changes supplied.)");
-  } else {
-    v.cyBusinessChanges.items.forEach((item, i) => {
-      lines.push(
-        `Change #${i + 1} [${item.category}]: ${item.description}`,
-      );
-    });
-  }
-  lines.push("");
 
   lines.push("## Source Files");
   lines.push(`- PY Audit: ${v.pyAuditFile.originalFilename}`);
