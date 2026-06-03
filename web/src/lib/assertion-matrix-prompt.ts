@@ -121,16 +121,17 @@ export function buildAssertionMatrixUserMessage(
   lines.push("");
 
   if (trialBalance) {
-    lines.push("## CY Trial Balance (PARSED — use these real balances + scoping)");
+    lines.push("## CY Trial Balance (PARSED — real account list + balances)");
     lines.push("");
     lines.push(trialBalanceToPromptText(trialBalance));
     lines.push("");
     lines.push(
-      "Use the real account names, real CY + PY balances, and the per-account",
-      "materiality scoping column verbatim from the TB above. The `Scoped In`",
-      "/`Below PM` column reflects the engagement's performance materiality —",
-      "treat `Scoped In` accounts as material. If a row has a 'YES — See Notes'",
-      "PY exception flag, surface that in `pyExceptions` for the matching row.",
+      "Use the real account names and real CY + PY balances above. Derive",
+      "materiality scoping yourself — an account is material when |CY balance|",
+      "exceeds the engagement's performance materiality (see the Materiality",
+      "block above), or when a specific engagement-level risk lifts it above",
+      "its balance. PY exceptions come from the attached PY audit PDF below,",
+      "not from the TB — never expect a scoping or exception column on the TB.",
     );
   } else {
     lines.push(

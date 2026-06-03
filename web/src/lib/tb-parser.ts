@@ -181,11 +181,14 @@ function inferSectionFromAcctNum(
 // Render the TB as a compact text block to inject into the matrix prompt.
 // Keep it readable so Claude can quote account names + balances directly in
 // citations. Includes section subtotals so the model has the bigger picture.
+// Intentionally omits any "Materiality Scoping" or "PY Exception Note" column
+// — per the scoping-principle memory, First-Pass derives its own scoping
+// from PM + balance and pulls PY exceptions from the attached PY audit PDF.
 export function trialBalanceToPromptText(tb: TrialBalance): string {
   const lines: string[] = [];
   lines.push(`Client: ${tb.clientName}`);
   lines.push("");
-  lines.push("Columns: Acct # | Account | Section | CY Balance | PY Balance | Materiality Scoping | PY Exception Note");
+  lines.push("Columns: Acct # | Account | Section | CY Balance | PY Balance");
   lines.push("");
 
   const grouped: Record<string, TrialBalanceAccount[]> = {};
@@ -207,15 +210,9 @@ export function trialBalanceToPromptText(tb: TrialBalance): string {
     lines.push(`## ${s.toUpperCase()}S  (CY total ${fmt(cyTotal)} · PY total ${fmt(pyTotal)})`);
     for (const a of rows) {
       lines.push(
-        [
-          a.acctNum,
-          a.name,
-          a.section,
-          fmt(a.cyBalance),
-          fmt(a.pyBalance),
-          a.materialityScoping || "—",
-          a.pyExceptionNote || "—",
-        ].join(" | "),
+        [a.acctNum, a.name, a.section, fmt(a.cyBalance), fmt(a.pyBalance)].join(
+          " | ",
+        ),
       );
     }
     lines.push("");
