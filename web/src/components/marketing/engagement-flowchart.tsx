@@ -112,12 +112,19 @@ function SideArrow({
     side === "right"
       ? { left: "calc(100% + 6px)" }
       : { right: "calc(100% + 6px)" };
-  const bodyPath =
-    side === "right" ? "M 4 0 Q 60 26 4 52" : "M 66 0 Q 10 26 66 52";
-  // Arrowhead drawn as a single stroke that runs wing → tip → wing so
-  // the corner rounds cleanly at the tip with strokeLinejoin="round".
-  const headPath =
-    side === "right" ? "M -3 43 L 4 52 L 11 43" : "M 59 43 L 66 52 L 73 43";
+  const isRight = side === "right";
+  // Body is a Q curve bulging out to one side. The endpoint tangent
+  // direction is (end - control) — for the right arrow that's
+  // (-56, 26) (down-left); for the left arrow it's (56, 26) (down-
+  // right). The arrowhead is drawn with the tip at the local origin
+  // and the back along +x, then translated to the body endpoint and
+  // rotated by the angle of the BACK direction (= reverse of tangent)
+  // so the head opens away from where the curve came from.
+  const bodyPath = isRight ? "M 4 0 Q 60 26 4 52" : "M 66 0 Q 10 26 66 52";
+  const tipX = isRight ? 4 : 66;
+  const tipY = 52;
+  // atan2(-26, 56) ≈ -24.9°  /  atan2(-26, -56) ≈ -155.1°
+  const headRotationDeg = isRight ? -24.9 : -155.1;
   return (
     <span
       aria-hidden="true"
@@ -142,7 +149,13 @@ function SideArrow({
           strokeLinejoin="round"
         >
           <path d={bodyPath} />
-          <path d={headPath} />
+          {/* Chevron tip at origin, wings opening to +x. Transform
+              positions it at the body endpoint and rotates it to align
+              with the curve's tangent. */}
+          <path
+            d="M 11 -5 L 0 0 L 11 5"
+            transform={`translate(${tipX} ${tipY}) rotate(${headRotationDeg})`}
+          />
         </g>
       </svg>
     </span>
