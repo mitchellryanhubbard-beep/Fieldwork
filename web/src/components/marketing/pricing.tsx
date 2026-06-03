@@ -48,7 +48,7 @@ export function Pricing() {
   return (
     <section
       id="pricing"
-      style={{ backgroundColor: "var(--color-fw-band)" }}
+      style={{ backgroundColor: "var(--color-fw-cream)" }}
       className="py-20"
     >
       <div className="mx-auto w-full max-w-6xl px-6">
