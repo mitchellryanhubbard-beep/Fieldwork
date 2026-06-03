@@ -137,23 +137,29 @@ export default async function EditEngagementPage({
               current={detail.cyTrialBalanceFile}
               verification={verifications.cy_tb}
             />
-
-            <div className="flex flex-wrap gap-2 border-t border-primary/10 pt-4">
-              <GenerateBinderButton
-                engagementId={id}
-                clientName={v.clientName || "engagement"}
-                generationBlockedReason={binderBlocker}
-              />
-              <GenerateMatrixButton
-                engagementId={id}
-                clientName={v.clientName || "engagement"}
-              />
-            </div>
           </div>
         </NumberedSection>
 
         <NumberedSection
           n={5}
+          title="Generate"
+          description="Generate the workpaper binder (scoping memo + assertion plan + lead sheets) and the standalone assertion-risk matrix workbook from the inputs above."
+        >
+          <div className="flex flex-wrap gap-2">
+            <GenerateBinderButton
+              engagementId={id}
+              clientName={v.clientName || "engagement"}
+              generationBlockedReason={binderBlocker}
+            />
+            <GenerateMatrixButton
+              engagementId={id}
+              clientName={v.clientName || "engagement"}
+            />
+          </div>
+        </NumberedSection>
+
+        <NumberedSection
+          n={6}
           title="Support and Workpapers"
           description="Source documents and workpapers organized by financial-statement line item. Expand each FSLI to upload its supporting schedules and open its workpapers."
         >
