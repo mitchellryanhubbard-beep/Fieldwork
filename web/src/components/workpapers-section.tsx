@@ -66,7 +66,20 @@ export function WorkpapersSection({
       }),
     );
   const untaggedCount = untaggedPy.length;
-  const sortedAccounts = [...accounts].sort((a, b) =>
+  // Collapse multiple scoped accounts in the same FSLI to a single
+  // "leader" account (largest |cyBalance|) so each FSLI renders one
+  // CY card. Without this, an FSLI like "Accounts Receivable, net"
+  // that maps to Trade + Other + Allowance shows three duplicate
+  // cards in the Current Year section.
+  const leaderByFsli = new Map<string, ScopedAccountListing>();
+  for (const a of accounts) {
+    const fsli = fsliByAcctNum[a.acctNum] ?? "Unsorted";
+    const current = leaderByFsli.get(fsli);
+    if (!current || Math.abs(a.cyBalance) > Math.abs(current.cyBalance)) {
+      leaderByFsli.set(fsli, a);
+    }
+  }
+  const sortedAccounts = [...leaderByFsli.values()].sort((a, b) =>
     a.acctNum.localeCompare(b.acctNum, undefined, { numeric: true }),
   );
 
