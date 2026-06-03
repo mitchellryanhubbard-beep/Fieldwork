@@ -227,18 +227,24 @@ export function EngagementForm({
         title="Planning & Risk Questionnaire"
         description="Identify current-year significant business changes, identify CY audit risks, and give the AI context to modify the audit approach from PY."
       >
-        <div className="space-y-6 rounded-xl border border-primary/10 bg-card p-5">
+        <div className="space-y-3 rounded-xl border border-primary/10 bg-card p-5">
           {PLANNING_QUESTIONNAIRE.map((group) => (
-            <div key={group.title} className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                {group.title}
-              </h3>
-              <div className="space-y-4">
+            <details
+              key={group.title}
+              className="group rounded-md border border-primary/10 bg-background/60"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary [&::-webkit-details-marker]:hidden">
+                <span>{group.title}</span>
+                <span className="text-sm text-primary/40 transition group-open:rotate-90">
+                  ▸
+                </span>
+              </summary>
+              <div className="space-y-4 border-t border-primary/10 px-4 py-4">
                 {group.questions.map((q) => (
                   <QuestionRow key={q.id} question={q} form={form} />
                 ))}
               </div>
-            </div>
+            </details>
           ))}
         </div>
       </NumberedSection>
