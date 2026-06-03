@@ -14,7 +14,7 @@ type Step = {
 const STEPS: Step[] = [
   {
     n: "01",
-    title: "Client + Framework",
+    title: "Client Information",
     body: "Client, fiscal year end, framework, and industry. Drives industry-specific templates and assertion-risk mapping downstream.",
   },
   {

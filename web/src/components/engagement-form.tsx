@@ -107,7 +107,7 @@ export function EngagementForm({
     <form onSubmit={onSubmit} className="space-y-8">
       <NumberedSection
         n={n0}
-        title="Client + Framework"
+        title="Client Information"
         description="Client, fiscal year end, framework, and industry. Drives industry-specific templates and assertion-risk mapping downstream."
       >
         <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-2">
