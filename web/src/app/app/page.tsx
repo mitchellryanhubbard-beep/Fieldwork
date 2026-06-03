@@ -111,11 +111,11 @@ export default async function AppHome() {
               return (
                 <li
                   key={e.id}
-                  className="group relative flex items-stretch gap-2 rounded-xl border border-primary/10 bg-card transition-colors hover:border-accent/40 hover:bg-secondary/50 focus-within:border-accent/40"
+                  className="group relative flex overflow-hidden rounded-xl border border-primary/10 bg-card transition-colors hover:border-accent/40 focus-within:border-accent/40"
                 >
                   <Link
                     href={`/app/engagements/${e.id}`}
-                    className="flex flex-1 gap-4 p-5"
+                    className="flex flex-1 gap-4 p-5 transition-colors group-hover:bg-secondary/50"
                   >
                     <span
                       aria-hidden="true"
@@ -149,12 +149,16 @@ export default async function AppHome() {
                       </div>
                     </div>
                   </Link>
-                  {/* Reveal on hover/focus at lg+. On mobile keep visible
-                      since there's no hover affordance. */}
-                  <div className="flex items-center pr-4 transition-opacity duration-150 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                  {/* Delete slides in from the right at lg+. Default w-0
+                      with overflow-hidden so the panel is collapsed; on
+                      group-hover/focus the column expands to w-24 and
+                      the destructive button is revealed. Mobile keeps it
+                      always visible since there's no hover. */}
+                  <div className="flex w-24 overflow-hidden lg:w-0 lg:transition-[width] lg:duration-200 lg:ease-out lg:group-hover:w-24 lg:group-focus-within:w-24">
                     <DeleteEngagementButton
                       clientName={e.clientName}
                       action={handleDelete}
+                      className="flex h-full w-24 shrink-0 items-center justify-center bg-destructive text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/85 disabled:opacity-60"
                     />
                   </div>
                 </li>
