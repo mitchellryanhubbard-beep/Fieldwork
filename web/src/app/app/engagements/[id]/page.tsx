@@ -6,7 +6,6 @@ import { GenerateBinderButton } from "@/components/generate-binder-button";
 import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
 import { buttonVariants } from "@/components/ui/button";
-import { DeleteEngagementButton } from "@/components/delete-engagement-button";
 import { Chip } from "@/components/ui/chip";
 import { loadVerification, type VerificationRecord } from "@/lib/intake/storage";
 import {
@@ -20,10 +19,7 @@ import {
   FRAMEWORK_LABELS,
   INDUSTRY_LABELS,
 } from "@/lib/engagement-schema";
-import {
-  deleteEngagementAction,
-  updateEngagementAction,
-} from "../actions";
+import { updateEngagementAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -61,11 +57,6 @@ export default async function EditEngagementPage({
     return updateEngagementAction(id, values);
   }
 
-  async function handleDelete() {
-    "use server";
-    await deleteEngagementAction(id);
-  }
-
   const v = detail.values;
 
   return (
@@ -97,12 +88,6 @@ export default async function EditEngagementPage({
               CTT {USD_COMPACT.format(v.clearlyTrivialThreshold)}
             </span>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <DeleteEngagementButton
-            clientName={v.clientName || "this engagement"}
-            action={handleDelete}
-          />
         </div>
       </header>
 
