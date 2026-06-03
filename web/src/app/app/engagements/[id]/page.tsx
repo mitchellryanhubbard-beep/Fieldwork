@@ -180,7 +180,7 @@ export default async function EditEngagementPage({
                   <p className="text-xs text-foreground/60">
                     PY files can be uploaded for reference or rolled forward
                     into the CY pane. Each scoped account gets its own
-                    workpaper and confirmation request set.
+                    workpaper.
                   </p>
                   <Link
                     href={`/app/engagements/${id}/workpapers`}

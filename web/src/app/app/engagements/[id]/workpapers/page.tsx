@@ -92,8 +92,7 @@ export default async function EngagementWorkpapersPage({
         </div>
         <p className="mt-4 max-w-2xl text-sm text-foreground/70">
           PY files can be uploaded for reference or rolled forward into the
-          CY pane. Each scoped account gets its own workpaper and confirmation
-          request set.
+          CY pane. Each scoped account gets its own workpaper.
         </p>
       </header>
 
