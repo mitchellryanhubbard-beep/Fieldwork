@@ -173,22 +173,23 @@ function SideArrow({
         <defs>
           <marker
             id={markerId}
-            viewBox="0 0 14 14"
-            refX="12"
+            viewBox="0 0 12 14"
+            refX="11"
             refY="7"
-            markerWidth="9"
-            markerHeight="9"
+            markerWidth="11"
+            markerHeight="13"
             orient="auto-start-reverse"
           >
-            {/* Ink-style arrowhead — solid filled silhouette with a
-                concave back so the tip reads as a single bold gesture
-                rather than two thin strokes. Matches the reference
-                hand-drawn arrow's chunky filled head. */}
+            {/* Hand-drawn open chevron — two thick stroked lines that
+                meet cleanly at the tip and flick out at the back.
+                Matches the reference green arrow: open silhouette,
+                bold strokes, no fill. */}
             <path
-              d="M 0 0 Q 6 3 12 7 Q 6 11 0 14 L 4 7 Z"
-              fill="currentColor"
+              d="M 0 0 Q 4 4 11 7 Q 4 10 0 14"
+              fill="none"
               stroke="currentColor"
-              strokeWidth={0.8}
+              strokeWidth={3}
+              strokeLinecap="round"
               strokeLinejoin="round"
             />
           </marker>
@@ -245,22 +246,23 @@ function ForkArrow({
         <defs>
           <marker
             id={markerId}
-            viewBox="0 0 14 14"
-            refX="12"
+            viewBox="0 0 12 14"
+            refX="11"
             refY="7"
-            markerWidth="9"
-            markerHeight="9"
+            markerWidth="11"
+            markerHeight="13"
             orient="auto-start-reverse"
           >
-            {/* Ink-style arrowhead — solid filled silhouette with a
-                concave back so the tip reads as a single bold gesture
-                rather than two thin strokes. Matches the reference
-                hand-drawn arrow's chunky filled head. */}
+            {/* Hand-drawn open chevron — two thick stroked lines that
+                meet cleanly at the tip and flick out at the back.
+                Matches the reference green arrow: open silhouette,
+                bold strokes, no fill. */}
             <path
-              d="M 0 0 Q 6 3 12 7 Q 6 11 0 14 L 4 7 Z"
-              fill="currentColor"
+              d="M 0 0 Q 4 4 11 7 Q 4 10 0 14"
+              fill="none"
               stroke="currentColor"
-              strokeWidth={0.8}
+              strokeWidth={3}
+              strokeLinecap="round"
               strokeLinejoin="round"
             />
           </marker>
