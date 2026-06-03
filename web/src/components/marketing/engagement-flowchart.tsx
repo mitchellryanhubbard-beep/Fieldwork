@@ -40,7 +40,7 @@ const STEPS: Step[] = [
   {
     n: "06",
     title: "Support and Workpapers",
-    body: "Source documents and workpapers organized by financial-statement line item. Expand each FSLI to upload its supporting schedules and open its workpapers.",
+    body: "Upload source documents and generate workpapers by financial-statement line item. Expand each FSLI to upload its supporting schedules and open its workpapers.",
   },
 ];
 

@@ -146,7 +146,7 @@ export default async function EditEngagementPage({
         <NumberedSection
           n={6}
           title="Support and Workpapers"
-          description="Source documents and workpapers organized by financial-statement line item. Expand each FSLI to upload its supporting schedules and open its workpapers."
+          description="Upload source documents and generate workpapers by financial-statement line item. Expand each FSLI to upload its supporting schedules and open its workpapers."
         >
           <FsliBreakdown
             engagementId={id}
