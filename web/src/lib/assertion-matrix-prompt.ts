@@ -1,3 +1,4 @@
+import type Anthropic from "@anthropic-ai/sdk";
 import type { EngagementSetup } from "@/lib/engagement-schema";
 import {
   ASSERTIONS,
@@ -8,6 +9,12 @@ import {
   trialBalanceToPromptText,
   type TrialBalance,
 } from "@/lib/tb-parser";
+
+export type PyAuditAttachment = {
+  bytes: Buffer;
+  contentType: string;
+  filename: string;
+};
 
 // System prompt — frozen across requests (so the credential server can
 // cache the prefix later). Voice: senior auditor giving the staff their
@@ -48,10 +55,13 @@ export const ASSERTION_MATRIX_SYSTEM_PROMPT = [
 // Optional `trialBalance` argument injects the real account list + CY/PY
 // balances + per-account materiality scoping into the prompt. When absent,
 // the model is told to flag that it's working without the TB.
+// Optional `pyAudit` attachment is rendered as a Claude document block so
+// the signed PY opinion + financials are read in full each generation.
 export function buildAssertionMatrixUserMessage(
   engagement: EngagementSetup,
   trialBalance?: TrialBalance,
-): string {
+  pyAudit?: PyAuditAttachment,
+): Array<Anthropic.ContentBlockParam> {
   const v = engagement;
   const lines: string[] = [];
 
@@ -131,11 +141,30 @@ export function buildAssertionMatrixUserMessage(
     );
   }
   lines.push("");
-  lines.push(
-    "The PY Audit (signed opinion + issued financial statements) is uploaded",
-    "but not parsed here. If you need PY exception detail beyond the TB's",
-    "exception column, flag it in `notes`.",
-  );
+  if (pyAudit && pyAudit.contentType === "application/pdf") {
+    lines.push(
+      "The PY Audit (signed opinion + issued financial statements) is",
+      "attached as a PDF document below. READ IT IN FULL and use it to:",
+      "  - Identify the prior-year opinion type and any emphasis-of-matter or",
+      "    going-concern language; cite it when it shapes a CY assertion.",
+      "  - Pull PY exceptions, misstatements, control deficiencies, or",
+      "    significant deficiencies named in the opinion or footnotes, and",
+      "    surface them in the matching account row's `pyExceptions`.",
+      "  - Anchor account-specific risks (revenue recognition policy,",
+      "    inventory costing method, related-party balances, contingencies,",
+      "    subsequent events) in actual footnote language — not boilerplate.",
+      "  - Cite the PY audit by section (e.g. 'PY opinion — Basis for",
+      "    Qualified Opinion' or 'PY footnote 7 — Inventory') in the",
+      "    `citation` field when a row is driven by the PY audit.",
+    );
+  } else {
+    lines.push(
+      "The PY Audit (signed opinion + issued financial statements) is",
+      "uploaded but not parseable in this generation (missing or non-PDF).",
+      "If you need PY exception detail beyond the TB's exception column,",
+      "flag it in `notes`.",
+    );
+  }
   lines.push("");
 
   lines.push("## Task");
@@ -148,5 +177,17 @@ export function buildAssertionMatrixUserMessage(
     "above its balance.",
   );
 
-  return lines.join("\n");
+  const blocks: Array<Anthropic.ContentBlockParam> = [];
+  if (pyAudit && pyAudit.contentType === "application/pdf") {
+    blocks.push({
+      type: "document",
+      source: {
+        type: "base64",
+        media_type: "application/pdf",
+        data: pyAudit.bytes.toString("base64"),
+      },
+    });
+  }
+  blocks.push({ type: "text", text: lines.join("\n") });
+  return blocks;
 }

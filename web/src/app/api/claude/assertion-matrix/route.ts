@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       matrix: result.matrix,
       tbParsed: result.tbParsed,
       tbParseError: result.tbParseError,
+      pyAuditAttached: result.pyAuditAttached,
+      pyAuditError: result.pyAuditError,
       usage: result.usage,
     });
   } catch (err) {

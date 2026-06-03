@@ -1,5 +1,9 @@
 import { DEFAULT_CLAUDE_MODEL, getClaudeClient } from "@/lib/claude";
-import { exportEngagement } from "@/lib/engagement-repo";
+import {
+  downloadEngagementFile,
+  exportEngagement,
+  getEngagement,
+} from "@/lib/engagement-repo";
 import {
   ASSERTION_MATRIX_JSON_SCHEMA,
   AssertionMatrixSchema,
@@ -8,6 +12,7 @@ import {
 import {
   ASSERTION_MATRIX_SYSTEM_PROMPT,
   buildAssertionMatrixUserMessage,
+  type PyAuditAttachment,
 } from "@/lib/assertion-matrix-prompt";
 import type { TrialBalance } from "@/lib/tb-parser";
 import { loadTrialBalanceForEngagement } from "@/lib/intake/load-canonical";
@@ -16,6 +21,8 @@ export type MatrixGenerationResult = {
   matrix: AssertionMatrix;
   tbParsed: number;
   tbParseError: string | null;
+  pyAuditAttached: boolean;
+  pyAuditError: string | null;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -47,14 +54,44 @@ export async function generateAssertionMatrix(
     }
   }
 
+  // PY audit attachment — pulled from storage and handed to Claude as a
+  // document block so the signed opinion + financials feed every matrix
+  // generation. PDF only; other types fall through with a surfaced note.
+  let pyAudit: PyAuditAttachment | undefined;
+  let pyAuditError: string | null = null;
+  const detail = await getEngagement(engagementId);
+  const pyMeta = detail?.pyAuditFile ?? null;
+  if (pyMeta) {
+    if (pyMeta.contentType === "application/pdf") {
+      try {
+        const bytes = await downloadEngagementFile(pyMeta.storagePath);
+        pyAudit = {
+          bytes,
+          contentType: pyMeta.contentType,
+          filename: pyMeta.originalFilename,
+        };
+      } catch (err) {
+        pyAuditError = `PY audit download failed: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    } else {
+      pyAuditError = `PY audit content-type ${pyMeta.contentType} not supported — upload a PDF to feed it into the matrix.`;
+    }
+  } else {
+    pyAuditError = "PY audit file not uploaded.";
+  }
+
   const client = getClaudeClient();
-  const userMessage = buildAssertionMatrixUserMessage(engagement, trialBalance);
+  const userContent = buildAssertionMatrixUserMessage(
+    engagement,
+    trialBalance,
+    pyAudit,
+  );
 
   const response = await client.messages.create({
     model: DEFAULT_CLAUDE_MODEL,
     max_tokens: 16_000,
     system: ASSERTION_MATRIX_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
+    messages: [{ role: "user", content: userContent }],
     output_config: {
       format: {
         type: "json_schema",
@@ -101,6 +138,8 @@ export async function generateAssertionMatrix(
     matrix: validated.data,
     tbParsed: trialBalance ? trialBalance.accounts.length : 0,
     tbParseError,
+    pyAuditAttached: !!pyAudit,
+    pyAuditError,
     usage: {
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,

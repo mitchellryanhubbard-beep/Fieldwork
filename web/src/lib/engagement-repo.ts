@@ -385,6 +385,18 @@ export async function getEngagementFileSignedUrl(
   return data.signedUrl;
 }
 
+export async function downloadEngagementFile(
+  storagePath: string,
+): Promise<Buffer> {
+  const sb = getServerSupabase();
+  const { data, error } = await sb.storage
+    .from(ENGAGEMENT_FILES_BUCKET)
+    .download(storagePath);
+  if (error || !data)
+    throw new Error(`download failed: ${error?.message ?? "unknown"}`);
+  return Buffer.from(await data.arrayBuffer());
+}
+
 // Produces a schema-conformant export object. Throws if required files are missing.
 export async function exportEngagement(id: string): Promise<EngagementSetup> {
   const detail = await getEngagement(id);
