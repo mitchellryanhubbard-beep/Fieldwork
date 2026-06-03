@@ -152,6 +152,8 @@ export default async function EditEngagementPage({
               current={detail.cyTrialBalanceFile}
               verification={verifications.cy_tb}
             />
+
+            <FsliBreakdown engagementId={id} />
           </div>
         </NumberedSection>
 
@@ -196,6 +198,67 @@ export default async function EditEngagementPage({
         </NumberedSection>
       </div>
     </main>
+  );
+}
+
+// Trial balance breakdown by financial-statement line item. Each FSLI
+// expands to its own Supporting Schedules and Workpapers links. Routes
+// are placeholders until per-FSLI pages exist.
+const FSLIS = [
+  { slug: "cash", name: "Cash" },
+  { slug: "accounts-receivable", name: "Accounts Receivable" },
+  { slug: "inventory", name: "Inventory" },
+  { slug: "ppe", name: "PP&E" },
+  { slug: "accounts-payable", name: "Accounts Payable" },
+  { slug: "revenue", name: "Revenue" },
+  { slug: "opex", name: "OPEX" },
+];
+
+function FsliBreakdown({ engagementId: _engagementId }: { engagementId: string }) {
+  return (
+    <div className="rounded-xl border border-primary/10 bg-card p-5">
+      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+        Trial balance breakdown
+      </h3>
+      <p className="mt-1 text-xs text-foreground/60">
+        Source documents and workpapers organized by financial-statement line
+        item.
+      </p>
+      <ul className="mt-4 space-y-2">
+        {FSLIS.map((f) => (
+          <li key={f.slug}>
+            <details className="group rounded-md border border-primary/10 bg-background/60">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
+                <span>{f.name}</span>
+                <span className="text-xs text-primary/40 transition group-open:rotate-90">
+                  ▸
+                </span>
+              </summary>
+              <div className="border-t border-primary/10 px-4 py-3">
+                <ul className="space-y-1.5 text-sm">
+                  <li>
+                    <Link
+                      href="#"
+                      className="text-primary/75 hover:text-primary hover:underline"
+                    >
+                      Supporting Schedules
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="#"
+                      className="text-primary/75 hover:text-primary hover:underline"
+                    >
+                      Workpapers
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
