@@ -130,7 +130,7 @@ export default async function EditEngagementPage({
         />
 
         <NumberedSection
-          n={5}
+          n={4}
           title="Source files"
           description="Prior-year signed audit opinion (PDF) and current-year trial balance (Excel, CSV, or PDF). Replacing an upload removes the prior file from storage."
         >
@@ -158,7 +158,7 @@ export default async function EditEngagementPage({
         </NumberedSection>
 
         <NumberedSection
-          n={6}
+          n={5}
           title="Supporting Schedules"
           description="Client-provided supporting schedules used during fieldwork — agings, listings, rolls, and confirmations. Each FSLI brings its own set as we add coverage."
         >
@@ -185,7 +185,7 @@ export default async function EditEngagementPage({
         </NumberedSection>
 
         <NumberedSection
-          n={7}
+          n={6}
           title="Workpapers"
           description="PY files can be uploaded for reference or rolled forward into the CY pane. Each scoped account gets its own workpaper and confirmation request set."
         >
