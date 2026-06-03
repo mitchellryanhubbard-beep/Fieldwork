@@ -75,15 +75,32 @@ export function EngagementFlowchart() {
           {STEPS.map((s, i) => (
             <div key={s.n} className="group relative">
               <FlowCard {...s} />
-              {i < STEPS.length - 1 ? <SideArrow index={i} /> : null}
+              {i < STEPS.length - 1 ? (
+                <SideArrow
+                  side={i % 2 === 0 ? "left" : "right"}
+                  index={i}
+                />
+              ) : (
+                <>
+                  <ForkArrow side="left" index={i} />
+                  <ForkArrow side="right" index={i} />
+                </>
+              )}
             </div>
           ))}
 
-          <YBranch />
+          {/* Mobile-only static fork connector. Desktop gets the
+              hover-triggered ForkArrows above. */}
+          <div className="lg:hidden">
+            <YBranch />
+          </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             {OPTIONS.map((o) => (
-              <FlowCard key={o.n} {...o} />
+              <div key={o.n} className="group relative">
+                <FlowCard {...o} />
+                <OptionFireworks />
+              </div>
             ))}
           </div>
         </div>
@@ -115,18 +132,34 @@ function FlowCard({ n, title, body }: Step) {
 // legs so the tip matches the SideArrow marker visually.
 const TIP_PATH = "M -5 -5 L 0 0 L 5 -5";
 
-// SideArrow — hover-triggered curved arrow that arcs out to the right of
-// the current card, then comes back in and points down at the next
+// SideArrow — hover-triggered curved arrow that arcs out from the side
+// of the current card and comes back in pointing down at the next
 // card. Mirrors the StepArrow pattern in HowItWorks: opacity 0 by
 // default, reveals on group-hover of the surrounding step container.
-function SideArrow({ index }: { index: number }) {
-  const markerId = `fw-flow-tip-${index}`;
+// Sides alternate down the flow (even indices left, odd indices right)
+// so the eye weaves zig-zag from card to card.
+function SideArrow({
+  side,
+  index,
+}: {
+  side: "left" | "right";
+  index: number;
+}) {
+  const markerId = `fw-flow-tip-${side}-${index}`;
+  const positionStyle =
+    side === "right"
+      ? { left: "calc(100% + 6px)" }
+      : { right: "calc(100% + 6px)" };
+  // Right side: leave card's right edge, bulge right, re-enter at right.
+  // Left side: mirrored — leave left edge, bulge left, re-enter at left.
+  const path =
+    side === "right" ? "M 4 0 Q 60 28 4 56" : "M 66 0 Q 10 28 66 56";
   return (
     <span
       aria-hidden="true"
       className="pointer-events-none absolute z-10 hidden lg:block"
       style={{
-        left: "calc(100% + 6px)",
+        ...positionStyle,
         top: "calc(100% - 4px)",
         width: 70,
         height: 56,
@@ -138,9 +171,6 @@ function SideArrow({ index }: { index: number }) {
         style={{ overflow: "visible" }}
       >
         <defs>
-          {/* Open chevron arrowhead — same shape as the StepArrow tip
-              and the YBranch leg tips so every arrowhead in the page
-              shares one visual language. */}
           <marker
             id={markerId}
             viewBox="0 0 10 10"
@@ -161,7 +191,7 @@ function SideArrow({ index }: { index: number }) {
           </marker>
         </defs>
         <path
-          d="M 4 0 Q 60 28 4 56"
+          d={path}
           fill="none"
           stroke="currentColor"
           strokeWidth={3.5}
@@ -170,6 +200,132 @@ function SideArrow({ index }: { index: number }) {
         />
       </svg>
     </span>
+  );
+}
+
+// ForkArrow — hover-triggered curve from card 06 splitting toward 6A
+// (left) or 6B (right). Sits absolutely below card 06 and spans the
+// 48px gap into the option row, fading in with the same gold arc as
+// the SideArrows.
+function ForkArrow({
+  side,
+  index,
+}: {
+  side: "left" | "right";
+  index: number;
+}) {
+  const markerId = `fw-flow-fork-${side}-${index}`;
+  // SVG viewBox is 0..100 horizontally so x positions read as percentages
+  // of card 06's width. preserveAspectRatio="none" stretches the curve
+  // to card width; non-scaling-stroke keeps the line weight clean.
+  // Start at horizontal centre (x=50), arc toward the target child
+  // card centre (x=25 for 6A, x=75 for 6B).
+  const path =
+    side === "left"
+      ? "M 50 0 C 50 30 25 30 25 50"
+      : "M 50 0 C 50 30 75 30 75 50";
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute left-0 top-full z-10 hidden w-full lg:block"
+      style={{ height: 56 }}
+    >
+      <svg
+        viewBox="0 0 100 56"
+        preserveAspectRatio="none"
+        className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
+        style={{ overflow: "visible" }}
+      >
+        <defs>
+          <marker
+            id={markerId}
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path
+              d="M 1 1 L 9 5 L 1 9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </marker>
+        </defs>
+        <path
+          d={path}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={3.5}
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          markerEnd={`url(#${markerId})`}
+        />
+      </svg>
+    </span>
+  );
+}
+
+// OptionFireworks — three staggered gold bursts that pop on hover of
+// the 6A / 6B cards. Same outline-only ray pattern used on the final
+// HowItWorks card.
+function OptionFireworks() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-10 hidden lg:block"
+    >
+      <Burst className="absolute -top-5 -left-3 size-10" delay={0} />
+      <Burst className="absolute -top-7 -right-3 size-12" delay={120} />
+      <Burst className="absolute -bottom-5 right-6 size-9" delay={240} />
+    </span>
+  );
+}
+
+function Burst({
+  className,
+  delay,
+}: {
+  className: string;
+  delay: number;
+}) {
+  return (
+    <svg
+      viewBox="0 0 60 60"
+      className={`${className} text-accent opacity-0 scale-0 origin-center transition duration-500 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100 group-hover:scale-100`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <g
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        fill="none"
+      >
+        <line x1="30" y1="30" x2="30" y2="6" />
+        <line x1="30" y1="30" x2="48" y2="12" />
+        <line x1="30" y1="30" x2="54" y2="30" />
+        <line x1="30" y1="30" x2="48" y2="48" />
+        <line x1="30" y1="30" x2="30" y2="54" />
+        <line x1="30" y1="30" x2="12" y2="48" />
+        <line x1="30" y1="30" x2="6" y2="30" />
+        <line x1="30" y1="30" x2="12" y2="12" />
+      </g>
+      <g fill="currentColor">
+        <circle cx="30" cy="30" r="1.4" />
+        <circle cx="30" cy="4" r="1" />
+        <circle cx="50" cy="10" r="1" />
+        <circle cx="56" cy="30" r="1" />
+        <circle cx="50" cy="50" r="1" />
+        <circle cx="30" cy="56" r="1" />
+        <circle cx="10" cy="50" r="1" />
+        <circle cx="4" cy="30" r="1" />
+        <circle cx="10" cy="10" r="1" />
+      </g>
+    </svg>
   );
 }
 
