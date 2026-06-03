@@ -8,11 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
+import { DeleteEngagementButton } from "@/components/delete-engagement-button";
 import { listEngagements } from "@/lib/engagement-repo";
 import {
   FRAMEWORK_LABELS,
   INDUSTRY_LABELS,
 } from "@/lib/engagement-schema";
+import { deleteEngagementAction } from "./engagements/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -98,46 +100,66 @@ export default async function AppHome() {
           </Card>
         ) : (
           <ol className="grid gap-3">
-            {engagements.map((e, i) => (
-              <li key={e.id}>
-                <Link
-                  href={`/app/engagements/${e.id}`}
-                  className="group flex gap-4 rounded-xl border border-primary/10 bg-card p-5 transition-colors hover:border-accent/40 hover:bg-secondary/50"
+            {engagements.map((e, i) => {
+              // Inline server action bound to this engagement's id. Wrapping
+              // it here so the row's <DeleteEngagementButton> can fire it
+              // after a native confirm.
+              async function handleDelete() {
+                "use server";
+                await deleteEngagementAction(e.id);
+              }
+              return (
+                <li
+                  key={e.id}
+                  className="group relative flex items-stretch gap-2 rounded-xl border border-primary/10 bg-card transition-colors hover:border-accent/40 hover:bg-secondary/50 focus-within:border-accent/40"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-mono text-sm font-semibold text-primary group-hover:bg-accent group-hover:text-primary"
+                  <Link
+                    href={`/app/engagements/${e.id}`}
+                    className="flex flex-1 gap-4 p-5"
                   >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-                      <span className="font-display text-xl font-medium text-primary group-hover:underline">
-                        {e.clientName}
-                      </span>
-                      <span className="text-xs uppercase tracking-[0.14em] text-foreground/50">
-                        Updated {new Date(e.updatedAt).toLocaleString()}
-                      </span>
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-mono text-sm font-semibold text-primary group-hover:bg-accent group-hover:text-primary"
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                        <span className="font-display text-xl font-medium text-primary group-hover:underline">
+                          {e.clientName}
+                        </span>
+                        <span className="text-xs uppercase tracking-[0.14em] text-foreground/50">
+                          Updated {new Date(e.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Chip>
+                          {INDUSTRY_LABELS[
+                            e.industry as keyof typeof INDUSTRY_LABELS
+                          ] ?? e.industry}
+                        </Chip>
+                        <Chip>
+                          {FRAMEWORK_LABELS[
+                            e.framework as keyof typeof FRAMEWORK_LABELS
+                          ] ?? e.framework}
+                        </Chip>
+                        <span className="font-mono text-sm text-foreground/70">
+                          FYE {e.fiscalYearEnd}
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Chip>
-                        {INDUSTRY_LABELS[
-                          e.industry as keyof typeof INDUSTRY_LABELS
-                        ] ?? e.industry}
-                      </Chip>
-                      <Chip>
-                        {FRAMEWORK_LABELS[
-                          e.framework as keyof typeof FRAMEWORK_LABELS
-                        ] ?? e.framework}
-                      </Chip>
-                      <span className="font-mono text-sm text-foreground/70">
-                        FYE {e.fiscalYearEnd}
-                      </span>
-                    </div>
+                  </Link>
+                  {/* Reveal on hover/focus at lg+. On mobile keep visible
+                      since there's no hover affordance. */}
+                  <div className="flex items-center pr-4 transition-opacity duration-150 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                    <DeleteEngagementButton
+                      clientName={e.clientName}
+                      action={handleDelete}
+                    />
                   </div>
-                </Link>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ol>
         )}
       </div>
