@@ -17,12 +17,6 @@ import {
 import type { ScopedAccountListing } from "@/lib/account-workpaper-listing";
 import type { PyWorkpaper } from "@/lib/py-workpaper-repo";
 
-const USD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
 export type WorkpapersSectionProps = {
   engagementId: string;
   accounts: ScopedAccountListing[];
@@ -108,7 +102,6 @@ export function WorkpapersSection({
             {pyGroupNames.map((group) => (
               <PyGroup
                 key={group}
-                title={group}
                 workpapers={[...pyWorkpapersByFsli[group]].sort((a, b) =>
                   a.originalFilename.localeCompare(b.originalFilename, undefined, {
                     numeric: true,
@@ -119,7 +112,6 @@ export function WorkpapersSection({
             ))}
             {untaggedCount > 0 ? (
               <PyGroup
-                title="Unsorted"
                 workpapers={untaggedPy}
                 engagementId={engagementId}
               />
@@ -156,30 +148,6 @@ export function WorkpapersSection({
                 key={a.acctNum}
                 className="rounded-xl border border-primary/10 bg-card overflow-hidden"
               >
-                <div className="flex items-end justify-between gap-3 bg-primary/[0.06] border-b border-primary/10 px-4 py-3">
-                  <div>
-                    <div className="font-medium text-foreground">{a.name}</div>
-                    <div className="font-mono text-xs text-foreground/55">
-                      {a.acctNum} · {fsli || "Unsorted"}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="text-right">
-                      <div className="text-[10px] uppercase tracking-wider text-foreground/55">
-                        CY
-                      </div>
-                      <div className="font-mono">{USD.format(a.cyBalance)}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] uppercase tracking-wider text-foreground/55">
-                        PY
-                      </div>
-                      <div className="font-mono text-foreground/70">
-                        {USD.format(a.pyBalance)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
                 <div className="p-4 space-y-3">
 
                 <ul className="divide-y divide-primary/10 text-sm pl-6 border-l-2 border-primary/10 ml-1">
@@ -322,19 +290,14 @@ function WorkpaperRow({
 }
 
 function PyGroup({
-  title,
   workpapers,
   engagementId,
 }: {
-  title: string;
   workpapers: PyWorkpaper[];
   engagementId: string;
 }) {
   return (
     <div className="rounded-xl border border-primary/10 bg-card p-4">
-      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/55">
-        {title} ({workpapers.length})
-      </div>
       <ul className="divide-y divide-primary/10 text-sm pl-6 border-l-2 border-primary/10 ml-1">
         {workpapers.map((wp) => (
           <PyRow key={wp.id} wp={wp} engagementId={engagementId} />
