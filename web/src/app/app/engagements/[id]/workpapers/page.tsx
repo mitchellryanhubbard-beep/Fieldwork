@@ -21,6 +21,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const USD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
 type Params = { id: string };
 
 export default async function EngagementWorkpapersPage({
@@ -85,11 +91,24 @@ export default async function EngagementWorkpapersPage({
         <h1 className="font-display text-3xl font-medium tracking-tight text-primary">
           Accounts Receivable Workpapers
         </h1>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-foreground/70">
-          <Chip>{FRAMEWORK_LABELS[v.framework]}</Chip>
-          <Chip>{INDUSTRY_LABELS[v.industry]}</Chip>
-          <span className="font-mono text-sm">FYE {v.fiscalYearEnd}</span>
-        </div>
+        {(() => {
+          const cyTotal = arAccounts.reduce((s, a) => s + a.cyBalance, 0);
+          const pyTotal = arAccounts.reduce((s, a) => s + a.pyBalance, 0);
+          return (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-foreground/70">
+              <Chip>{FRAMEWORK_LABELS[v.framework]}</Chip>
+              <Chip>{INDUSTRY_LABELS[v.industry]}</Chip>
+              <span className="font-mono text-sm">FYE {v.fiscalYearEnd}</span>
+              <span className="text-foreground/40">·</span>
+              <span className="font-mono text-sm">
+                CY {USD.format(cyTotal)}
+              </span>
+              <span className="font-mono text-sm text-foreground/55">
+                PY {USD.format(pyTotal)}
+              </span>
+            </div>
+          );
+        })()}
         <p className="mt-4 max-w-2xl text-sm text-foreground/70">
           PY files can be uploaded for reference or rolled forward into the
           CY pane. Each scoped account gets its own workpaper.
