@@ -153,48 +153,51 @@ export default async function EditEngagementPage({
               verification={verifications.cy_tb}
             />
 
-            <FsliBreakdown engagementId={id} />
-          </div>
-        </NumberedSection>
-
-        <NumberedSection
-          n={5}
-          title="Supporting Schedules"
-          description="Client-provided supporting schedules used during fieldwork — agings, listings, rolls, and confirmations. Each FSLI brings its own set as we add coverage."
-        >
-          <div className="space-y-4">
-            <FileUpload
+            <FsliBreakdown
               engagementId={id}
-              kind="ar_aging"
-              title="AR Aging — by Customer + Invoice"
-              description="Open AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data on upload."
-              accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
-              current={detail.arAgingFile}
-              verification={verifications.ar_aging}
-            />
-            <FileUpload
-              engagementId={id}
-              kind="subsequent_cash_receipts"
-              title="Subsequent Cash Receipts"
-              description="Cash receipts collected after the balance-sheet date, applied against pre-YE invoices. Powers the Existence + Valuation substantive test (receipt-to-invoice matching, % collected within 30/60 days, aged-uncollected flagging)."
-              accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
-              current={detail.subsequentCashReceiptsFile}
-              verification={verifications.subsequent_cash_receipts}
+              schedulesByFsli={{
+                "accounts-receivable": (
+                  <div className="space-y-4">
+                    <FileUpload
+                      engagementId={id}
+                      kind="ar_aging"
+                      title="AR Aging — by Customer + Invoice"
+                      description="Open AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data on upload."
+                      accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
+                      current={detail.arAgingFile}
+                      verification={verifications.ar_aging}
+                    />
+                    <FileUpload
+                      engagementId={id}
+                      kind="subsequent_cash_receipts"
+                      title="Subsequent Cash Receipts"
+                      description="Cash receipts collected after the balance-sheet date, applied against pre-YE invoices. Powers the Existence + Valuation substantive test (receipt-to-invoice matching, % collected within 30/60 days, aged-uncollected flagging)."
+                      accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
+                      current={detail.subsequentCashReceiptsFile}
+                      verification={verifications.subsequent_cash_receipts}
+                    />
+                  </div>
+                ),
+              }}
+              workpapersByFsli={{
+                "accounts-receivable": (
+                  <div className="space-y-3">
+                    <p className="text-xs text-foreground/60">
+                      PY files can be uploaded for reference or rolled forward
+                      into the CY pane. Each scoped account gets its own
+                      workpaper and confirmation request set.
+                    </p>
+                    <Link
+                      href={`/app/engagements/${id}/workpapers`}
+                      className={`${buttonVariants({ variant: "gold", size: "sm" })} w-fit`}
+                    >
+                      Open AR workpapers →
+                    </Link>
+                  </div>
+                ),
+              }}
             />
           </div>
-        </NumberedSection>
-
-        <NumberedSection
-          n={6}
-          title="Workpapers"
-          description="PY files can be uploaded for reference or rolled forward into the CY pane. Each scoped account gets its own workpaper and confirmation request set."
-        >
-          <Link
-            href={`/app/engagements/${id}/workpapers`}
-            className={`${buttonVariants({ variant: "gold" })} w-fit`}
-          >
-            Open workpapers →
-          </Link>
         </NumberedSection>
       </div>
     </main>
@@ -214,7 +217,17 @@ const FSLIS = [
   { slug: "opex", name: "OPEX" },
 ];
 
-function FsliBreakdown({ engagementId: _engagementId }: { engagementId: string }) {
+type FsliBreakdownProps = {
+  engagementId: string;
+  schedulesByFsli?: Record<string, React.ReactNode>;
+  workpapersByFsli?: Record<string, React.ReactNode>;
+};
+
+function FsliBreakdown({
+  engagementId: _engagementId,
+  schedulesByFsli = {},
+  workpapersByFsli = {},
+}: FsliBreakdownProps) {
   return (
     <div className="rounded-xl border border-primary/10 bg-card p-5">
       <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -234,31 +247,55 @@ function FsliBreakdown({ engagementId: _engagementId }: { engagementId: string }
                   ▸
                 </span>
               </summary>
-              <div className="border-t border-primary/10 px-4 py-3">
-                <ul className="space-y-1.5 text-sm">
-                  <li>
-                    <Link
-                      href="#"
-                      className="text-primary/75 hover:text-primary hover:underline"
-                    >
-                      Supporting Schedules
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#"
-                      className="text-primary/75 hover:text-primary hover:underline"
-                    >
-                      Workpapers
-                    </Link>
-                  </li>
-                </ul>
+              <div className="space-y-2 border-t border-primary/10 px-4 py-3">
+                <FsliChild
+                  label="Supporting Schedules"
+                  content={schedulesByFsli[f.slug]}
+                />
+                <FsliChild
+                  label="Workpapers"
+                  content={workpapersByFsli[f.slug]}
+                />
               </div>
             </details>
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+// A single child row under an FSLI. If `content` is provided, render a
+// nested <details> with the title as the summary so the user can drill
+// straight into the schedule uploads or workpaper links. Otherwise show a
+// placeholder link until that FSLI gets wired up.
+function FsliChild({
+  label,
+  content,
+}: {
+  label: string;
+  content?: React.ReactNode;
+}) {
+  if (!content) {
+    return (
+      <Link
+        href="#"
+        className="block text-sm text-primary/75 hover:text-primary hover:underline"
+      >
+        {label}
+      </Link>
+    );
+  }
+  return (
+    <details className="group/inner rounded border border-primary/10 bg-background">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm text-primary [&::-webkit-details-marker]:hidden">
+        <span>{label}</span>
+        <span className="text-xs text-primary/40 transition group-open/inner:rotate-90">
+          ▸
+        </span>
+      </summary>
+      <div className="border-t border-primary/10 px-3 py-3">{content}</div>
+    </details>
   );
 }
 
