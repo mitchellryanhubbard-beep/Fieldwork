@@ -130,7 +130,7 @@ function FlowCard({ n, title, body }: Step) {
 
 // Shared chevron tip geometry — 10 wide × 5 deep. Used by the YBranch
 // legs so the tip matches the SideArrow marker visually.
-const TIP_PATH = "M -5 -5 Q -2 -2 0 0 Q 2 -2 5 -5";
+const TIP_PATH = "M -5 -5 C -3 -3 -1 -1 0 0 C 1 -1 3 -3 5 -5";
 
 // SideArrow — hover-triggered curved arrow that arcs out from the side
 // of the current card and comes back in pointing down at the next
@@ -167,24 +167,24 @@ function SideArrow({
     >
       <svg
         viewBox="0 0 70 56"
-        className="size-full text-accent/40 transition-[color,filter] duration-300 ease-out group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
+        className="size-full origin-center text-accent/40 transition-all duration-300 ease-out group-hover:scale-110 group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
         style={{ overflow: "visible" }}
       >
         <defs>
           <marker
             id={markerId}
             viewBox="0 0 10 10"
-            refX="8"
+            refX="9"
             refY="5"
-            markerWidth="7"
-            markerHeight="7"
+            markerWidth="11"
+            markerHeight="11"
             orient="auto-start-reverse"
           >
             <path
-              d="M 1 1 Q 6 3 9 5 Q 6 7 1 9"
+              d="M 0 0 C 5 2 9 4 9 5 C 9 6 5 8 0 10"
               fill="none"
               stroke="currentColor"
-              strokeWidth={2}
+              strokeWidth={2.2}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -236,24 +236,24 @@ function ForkArrow({
     >
       <svg
         viewBox="0 0 180 64"
-        className="size-full text-accent/40 transition-[color,filter] duration-300 ease-out group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
+        className="size-full origin-center text-accent/40 transition-all duration-300 ease-out group-hover:scale-110 group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
         style={{ overflow: "visible" }}
       >
         <defs>
           <marker
             id={markerId}
             viewBox="0 0 10 10"
-            refX="8"
+            refX="9"
             refY="5"
-            markerWidth="7"
-            markerHeight="7"
+            markerWidth="11"
+            markerHeight="11"
             orient="auto-start-reverse"
           >
             <path
-              d="M 1 1 Q 6 3 9 5 Q 6 7 1 9"
+              d="M 0 0 C 5 2 9 4 9 5 C 9 6 5 8 0 10"
               fill="none"
               stroke="currentColor"
-              strokeWidth={2}
+              strokeWidth={2.2}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
