@@ -68,22 +68,42 @@ export async function parseArAging(
   const sheet = wb.worksheets[0];
   if (!sheet) throw new Error("AR Aging has no worksheets");
 
-  const asOfDate = parseAsOfDate(readCellText(sheet, 3, 1));
+  const asOfDate = scanForAsOfDate(sheet);
 
+  // First try the invoice-level layout (Hartwell pattern).
+  const invoices = parseInvoiceLevel(sheet);
+
+  // Customer-level fallback (Marigold pattern): one row per customer with
+  // aging-bucket columns and no invoice detail. We synthesize one
+  // placeholder invoice per customer so downstream code keeps working.
+  if (invoices.length === 0) {
+    const fallback = parseCustomerLevel(sheet);
+    if (fallback.length > 0) {
+      const customers = rollUpToCustomers(fallback);
+      const total = fallback.reduce((acc, inv) => acc + inv.total, 0);
+      return { asOfDate, customers, invoices: fallback, total };
+    }
+    throw new Error(
+      "AR Aging xlsx did not match either the invoice-level or customer-level layouts the parser recognises. Use manual mapping or re-export the file with a 'Customer' header row plus aging-bucket columns (Total, Current, 1-30, 31-60, 61-90, 90+).",
+    );
+  }
+
+  const customers = rollUpToCustomers(invoices);
+  const total = invoices.reduce((acc, inv) => acc + inv.total, 0);
+
+  return { asOfDate, customers, invoices, total };
+}
+
+// Hartwell layout: invoice rows have customer code in col 1, invoice # in
+// col 3, and aging buckets in fixed columns 8-13.
+function parseInvoiceLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
   const invoices: ArInvoice[] = [];
-
   for (let r = 8; r <= sheet.rowCount; r++) {
     const c1 = readCellText(sheet, r, 1).trim();
     const c3 = readCellText(sheet, r, 3).trim();
-
-    // Customer banner row: starts with "C### —" in col 1 (merged across).
-    // Invoice rows ALSO have the cust # in col 1 but col 3 (invoice #) is
-    // populated. Subtotal rows start with "Subtotal —".
     if (!c1) continue;
     if (/^subtotal\b/i.test(c1)) continue;
-    if (!c3) continue; // banner row — no invoice #
-
-    // Defensive: if col 1 isn't a pure customer code (e.g., "C001"), skip.
+    if (!c3) continue;
     if (!/^[A-Z]\d{2,5}$/.test(c1)) continue;
 
     invoices.push({
@@ -104,11 +124,139 @@ export async function parseArAging(
       notes: readCellText(sheet, r, 15).trim(),
     });
   }
+  return invoices;
+}
 
-  const customers = rollUpToCustomers(invoices);
-  const total = invoices.reduce((acc, inv) => acc + inv.total, 0);
+// Marigold-style customer-level layout. Detects the header row by scanning
+// for "Customer" + aging-bucket keywords, then maps columns by header text
+// (positions vary between schedules). Each customer becomes a synthetic
+// one-invoice row tagged with `${custNum}-AGG` so downstream sampling can
+// still pick at the customer grain.
+function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
+  const headerRow = findCustomerAgingHeaderRow(sheet);
+  if (headerRow == null) return [];
 
-  return { asOfDate, customers, invoices, total };
+  const map = mapAgingColumns(sheet, headerRow);
+  if (map.customer == null || map.total == null) return [];
+
+  const invoices: ArInvoice[] = [];
+  let custCounter = 1;
+  for (let r = headerRow + 1; r <= sheet.rowCount; r++) {
+    const custName = readCellText(sheet, r, map.customer).trim();
+    if (!custName) continue;
+    if (/^(grand\s+)?total\b/i.test(custName)) continue;
+    if (/^subtotal\b/i.test(custName)) continue;
+
+    const total = readCellNumber(sheet, r, map.total);
+    if (total === 0) continue;
+
+    const custNum = `C${String(custCounter).padStart(3, "0")}`;
+    custCounter += 1;
+
+    const d90_plus =
+      (map.d90_plus != null ? readCellNumber(sheet, r, map.d90_plus) : 0) +
+      (map.d120_plus != null ? readCellNumber(sheet, r, map.d120_plus) : 0);
+
+    invoices.push({
+      custNum,
+      custName,
+      invoiceNum: `${custNum}-AGG`,
+      invoiceDate: null,
+      dueDate: null,
+      terms: "",
+      salesRep: "",
+      total,
+      current: map.current != null ? readCellNumber(sheet, r, map.current) : 0,
+      d1_30: map.d1_30 != null ? readCellNumber(sheet, r, map.d1_30) : 0,
+      d31_60: map.d31_60 != null ? readCellNumber(sheet, r, map.d31_60) : 0,
+      d61_90: map.d61_90 != null ? readCellNumber(sheet, r, map.d61_90) : 0,
+      d90_plus,
+      credits: 0,
+      notes: "",
+    });
+  }
+  return invoices;
+}
+
+type CustomerAgingColumns = {
+  customer?: number;
+  total?: number;
+  current?: number;
+  d1_30?: number;
+  d31_60?: number;
+  d61_90?: number;
+  d90_plus?: number;
+  d120_plus?: number;
+};
+
+function findCustomerAgingHeaderRow(
+  sheet: ExcelJS.Worksheet,
+): number | null {
+  const maxRow = Math.min(20, sheet.rowCount);
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let r = 1; r <= maxRow; r++) {
+    let hasCustomer = false;
+    let hasBucket = false;
+    for (let c = 1; c <= maxCol; c++) {
+      const h = readCellText(sheet, r, c).trim().toLowerCase();
+      if (!h) continue;
+      if (/^customer(\s+name)?$/.test(h)) hasCustomer = true;
+      if (/^(current|1\s*-\s*30|31\s*-\s*60|61\s*-\s*90)$/.test(h))
+        hasBucket = true;
+    }
+    if (hasCustomer && hasBucket) return r;
+  }
+  return null;
+}
+
+function mapAgingColumns(
+  sheet: ExcelJS.Worksheet,
+  headerRow: number,
+): CustomerAgingColumns {
+  const map: CustomerAgingColumns = {};
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let c = 1; c <= maxCol; c++) {
+    const h = readCellText(sheet, headerRow, c).trim().toLowerCase();
+    if (!h) continue;
+    if (map.customer == null && /^customer(\s+name)?$/.test(h)) {
+      map.customer = c;
+    } else if (map.total == null && /^total$/.test(h)) {
+      map.total = c;
+    } else if (map.current == null && /^current$/.test(h)) {
+      map.current = c;
+    } else if (map.d1_30 == null && /^1\s*-\s*30$/.test(h)) {
+      map.d1_30 = c;
+    } else if (map.d31_60 == null && /^31\s*-\s*60$/.test(h)) {
+      map.d31_60 = c;
+    } else if (map.d61_90 == null && /^61\s*-\s*90$/.test(h)) {
+      map.d61_90 = c;
+    } else if (
+      map.d90_plus == null &&
+      /^(90\+|over\s*90|91\s*-\s*120)$/.test(h)
+    ) {
+      map.d90_plus = c;
+    } else if (map.d120_plus == null && /^120\+$/.test(h)) {
+      map.d120_plus = c;
+    }
+  }
+  return map;
+}
+
+// Scan the first six rows for the as-of date. Tolerates the Hartwell
+// "As of December 31, 2024", the Marigold "Year Ended December 31, 2025",
+// or a bare date string anywhere in those rows.
+function scanForAsOfDate(sheet: ExcelJS.Worksheet): string | null {
+  const maxRow = Math.min(6, sheet.rowCount);
+  const maxCol = Math.min(10, sheet.columnCount);
+  for (let r = 1; r <= maxRow; r++) {
+    for (let c = 1; c <= maxCol; c++) {
+      const text = readCellText(sheet, r, c).trim();
+      if (!text) continue;
+      const parsed = parseAsOfDate(text);
+      if (parsed) return parsed;
+    }
+  }
+  return null;
 }
 
 // Shared rollup helper — used by every aging source path (xlsx parse,
@@ -208,9 +356,24 @@ function parseDateCell(value: unknown): string | null {
 }
 
 function parseAsOfDate(text: string): string | null {
-  // "As of December 31, 2024" → 2024-12-31; fall back to Date.parse.
-  const m = /as of\s+([A-Za-z]+\s+\d+,\s+\d{4})/i.exec(text);
-  const candidate = m ? m[1] : text;
-  const d = new Date(candidate);
+  // "As of December 31, 2024" or "Year Ended December 31, 2025" or a bare
+  // date string. Pull the first long-form date (Month Day, Year) we see.
+  // Falls back to Date.parse on the raw text.
+  const longForm = /([A-Z][a-z]+\s+\d{1,2},\s+\d{4})/.exec(text);
+  if (longForm) {
+    const d = new Date(longForm[1]);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  }
+  // ISO-style: 2024-12-31
+  const iso = /(\d{4})-(\d{2})-(\d{2})/.exec(text);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  // Slashed: 12/31/2024
+  const slashed = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(text);
+  if (slashed) {
+    const mm = slashed[1].padStart(2, "0");
+    const dd = slashed[2].padStart(2, "0");
+    return `${slashed[3]}-${mm}-${dd}`;
+  }
+  const d = new Date(text);
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
