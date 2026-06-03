@@ -43,8 +43,9 @@ const ALIASES: Record<keyof ArInvoice, string[]> = {
     "90+ Days ($)",
     "Over 90",
     "Over 90 Days",
-    "120+",
   ],
+  d91_120: ["91-120", "91-120 Days", "91 to 120 Days"],
+  d120_plus: ["120+", "120+ Days", "Over 120", "Over 120 Days"],
   credits: ["Credits", "Credits ($)", "Unapplied"],
   notes: ["Notes", "Memo", "Comments"],
 };

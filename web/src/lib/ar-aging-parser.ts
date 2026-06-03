@@ -16,7 +16,13 @@ export type ArInvoice = {
   d1_30: number;
   d31_60: number;
   d61_90: number;
+  // Combined 90+ bucket. When the source file splits 91-120 / 120+
+  // separately, both are preserved on the optional `d91_120` and
+  // `d120_plus` below and `d90_plus` carries their sum so legacy
+  // callers keep working.
   d90_plus: number;
+  d91_120?: number;
+  d120_plus?: number;
   credits: number;
   notes: string;
 };
@@ -30,6 +36,8 @@ export type ArCustomer = {
   d31_60: number;
   d61_90: number;
   d90_plus: number;
+  d91_120?: number;
+  d120_plus?: number;
   credits: number;
   invoiceCount: number;
 };
@@ -106,6 +114,7 @@ function parseInvoiceLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
     if (!c3) continue;
     if (!/^[A-Z]\d{2,5}$/.test(c1)) continue;
 
+    const invoiceLevelD90Plus = readCellNumber(sheet, r, 13);
     invoices.push({
       custNum: c1,
       custName: readCellText(sheet, r, 2).trim(),
@@ -119,7 +128,13 @@ function parseInvoiceLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
       d1_30: readCellNumber(sheet, r, 10),
       d31_60: readCellNumber(sheet, r, 11),
       d61_90: readCellNumber(sheet, r, 12),
-      d90_plus: readCellNumber(sheet, r, 13),
+      d90_plus: invoiceLevelD90Plus,
+      // Hartwell layout has a single 90+ column; the split fields
+      // aren't available here, so put everything on d91_120 and zero
+      // d120_plus. Workpapers that use the split will still total to
+      // d90_plus.
+      d91_120: invoiceLevelD90Plus,
+      d120_plus: 0,
       credits: readCellNumber(sheet, r, 14),
       notes: readCellText(sheet, r, 15).trim(),
     });
@@ -153,9 +168,11 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
     const custNum = `C${String(custCounter).padStart(3, "0")}`;
     custCounter += 1;
 
-    const d90_plus =
-      (map.d90_plus != null ? readCellNumber(sheet, r, map.d90_plus) : 0) +
-      (map.d120_plus != null ? readCellNumber(sheet, r, map.d120_plus) : 0);
+    const d91_120 =
+      map.d90_plus != null ? readCellNumber(sheet, r, map.d90_plus) : 0;
+    const d120_plus =
+      map.d120_plus != null ? readCellNumber(sheet, r, map.d120_plus) : 0;
+    const d90_plus = d91_120 + d120_plus;
 
     invoices.push({
       custNum,
@@ -171,6 +188,8 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
       d31_60: map.d31_60 != null ? readCellNumber(sheet, r, map.d31_60) : 0,
       d61_90: map.d61_90 != null ? readCellNumber(sheet, r, map.d61_90) : 0,
       d90_plus,
+      d91_120,
+      d120_plus,
       credits: 0,
       notes: "",
     });
@@ -277,6 +296,8 @@ function rollUpToCustomers(invoices: ArInvoice[]): ArCustomer[] {
       existing.d31_60 += inv.d31_60;
       existing.d61_90 += inv.d61_90;
       existing.d90_plus += inv.d90_plus;
+      existing.d91_120 = (existing.d91_120 ?? 0) + (inv.d91_120 ?? 0);
+      existing.d120_plus = (existing.d120_plus ?? 0) + (inv.d120_plus ?? 0);
       existing.credits += inv.credits;
       existing.invoiceCount += 1;
     } else {
@@ -289,6 +310,8 @@ function rollUpToCustomers(invoices: ArInvoice[]): ArCustomer[] {
         d31_60: inv.d31_60,
         d61_90: inv.d61_90,
         d90_plus: inv.d90_plus,
+        d91_120: inv.d91_120 ?? 0,
+        d120_plus: inv.d120_plus ?? 0,
         credits: inv.credits,
         invoiceCount: 1,
       });

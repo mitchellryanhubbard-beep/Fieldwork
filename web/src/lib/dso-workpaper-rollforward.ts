@@ -269,14 +269,15 @@ function rolloverAgingDistributionSection(
     } else if (/^61\s*[-–]\s*90/.test(label)) {
       cell.value = totals.d61_90;
       updates++;
-    } else if (/^91\s*[-–]\s*120|^91\+|^over\s*90/.test(label)) {
-      // Aging-parser canonical bucket is d90_plus (combines 91-120 +
-      // 120+). When the workpaper splits these, write everything to
-      // 91-120 and zero out 120+. Best effort.
-      cell.value = totals.d90_plus;
+    } else if (/^91\s*[-–]\s*120|^91\+/.test(label)) {
+      cell.value = totals.d91_120;
       updates++;
     } else if (/^120\s*\+|^over\s*120/.test(label)) {
-      cell.value = 0;
+      cell.value = totals.d120_plus;
+      updates++;
+    } else if (/^over\s*90|^90\+/.test(label)) {
+      // Workpaper that keeps a single 90+ bucket.
+      cell.value = totals.d90_plus;
       updates++;
     }
   }
@@ -290,20 +291,26 @@ function computeAgingBucketTotals(aging: ArAging): {
   d31_60: number;
   d61_90: number;
   d90_plus: number;
+  d91_120: number;
+  d120_plus: number;
 } {
   let current = 0;
   let d1_30 = 0;
   let d31_60 = 0;
   let d61_90 = 0;
   let d90_plus = 0;
+  let d91_120 = 0;
+  let d120_plus = 0;
   for (const inv of aging.invoices) {
     current += inv.current;
     d1_30 += inv.d1_30;
     d31_60 += inv.d31_60;
     d61_90 += inv.d61_90;
     d90_plus += inv.d90_plus;
+    d91_120 += inv.d91_120 ?? 0;
+    d120_plus += inv.d120_plus ?? 0;
   }
-  return { current, d1_30, d31_60, d61_90, d90_plus };
+  return { current, d1_30, d31_60, d61_90, d90_plus, d91_120, d120_plus };
 }
 
 // ---------------------------------------------------------------------------
