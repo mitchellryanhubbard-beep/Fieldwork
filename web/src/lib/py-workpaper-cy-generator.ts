@@ -183,6 +183,13 @@ export async function generateCyWorkpaperById(
   // type-specific details.
   writeProcedureBoxes(wb, matrix);
 
+  // Final pass: round every numeric cell (and every formula's cached
+  // result) to 2 decimal places. Catches the long fractional noise
+  // that comes out of formulas like ROUND(C14/C13*365,1) →
+  // 51.50281531531532 and percentages like 0.18914604948 →
+  // displays as 18.9% but stored with 12 digits of noise.
+  roundLongDecimals(wb);
+
   const conclusionCount =
     rewroteConclusions +
     conclusionFormulaCount +
@@ -1810,4 +1817,52 @@ function readCellText(cell: ExcelJS.Cell): string {
     if (typeof t === "string") return t;
   }
   return "";
+}
+
+// Walk every cell once and round long decimals to 2 places. Skips
+// values that already fit in 2 decimals.
+function roundLongDecimals(wb: ExcelJS.Workbook): number {
+  let updates = 0;
+  for (const sheet of wb.worksheets) {
+    for (let r = 1; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      for (let c = 1; c <= sheet.columnCount; c++) {
+        const cell = row.getCell(c);
+        const v = cell.value;
+        if (typeof v === "number") {
+          if (hasMoreThanTwoDecimals(v)) {
+            cell.value = round2(v);
+            updates += 1;
+          }
+        } else if (
+          v &&
+          typeof v === "object" &&
+          "formula" in v &&
+          "result" in v
+        ) {
+          const result = (v as { result: unknown }).result;
+          if (typeof result === "number" && hasMoreThanTwoDecimals(result)) {
+            cell.value = {
+              ...v,
+              result: round2(result),
+            } as ExcelJS.CellValue;
+            updates += 1;
+          }
+        }
+      }
+    }
+  }
+  return updates;
+}
+
+function hasMoreThanTwoDecimals(n: number): boolean {
+  if (!Number.isFinite(n)) return false;
+  // Floating-point safe: compare the value rounded to 2 places against
+  // the original to within a tiny epsilon. Anything that differs by
+  // more than 1e-9 (well below "two decimal places") gets rounded.
+  return Math.abs(Math.round(n * 100) / 100 - n) > 1e-9;
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
