@@ -183,7 +183,7 @@ export function EngagementForm({
       <NumberedSection
         n={n0 + 1}
         title="Materiality"
-        description="Drives scoping, sample sizes, and exception flagging across every downstream test."
+        description="Input engagement materiality to drive scoping, sample sizes, and exception flagging across every downstream test."
       >
         <div className="grid gap-4 rounded-xl border border-primary/10 bg-card p-5 sm:grid-cols-3">
           <Field

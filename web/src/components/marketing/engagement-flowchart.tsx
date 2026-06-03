@@ -20,7 +20,7 @@ const STEPS: Step[] = [
   {
     n: "02",
     title: "Materiality",
-    body: "Drives scoping, sample sizes, and exception flagging across every downstream test.",
+    body: "Input engagement materiality to drive scoping, sample sizes, and exception flagging across every downstream test.",
   },
   {
     n: "03",
