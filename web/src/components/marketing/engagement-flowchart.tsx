@@ -167,7 +167,7 @@ function SideArrow({
     >
       <svg
         viewBox="0 0 70 56"
-        className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
+        className="size-full text-accent/40 transition-[color,filter] duration-300 ease-out group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
         style={{ overflow: "visible" }}
       >
         <defs>
@@ -204,9 +204,10 @@ function SideArrow({
 }
 
 // ForkArrow — hover-triggered curve from card 06 splitting toward 6A
-// (left) or 6B (right). Sits absolutely below card 06 and spans the
-// 48px gap into the option row, fading in with the same gold arc as
-// the SideArrows.
+// (left) or 6B (right). Each side is its own fixed-size SVG with
+// marker-end so the chevron tip renders identically to the SideArrows
+// above (no preserveAspectRatio="none" stretching). The two SVGs sit
+// 4px apart horizontally so the arrows read as separate at the start.
 function ForkArrow({
   side,
   index,
@@ -215,25 +216,27 @@ function ForkArrow({
   index: number;
 }) {
   const markerId = `fw-flow-fork-${side}-${index}`;
-  // SVG viewBox is 0..100 horizontally so x positions read as percentages
-  // of card 06's width. preserveAspectRatio="none" stretches the curve
-  // to card width; non-scaling-stroke keeps the line weight clean.
-  // Start at horizontal centre (x=50), arc toward the target child
-  // card centre (x=25 for 6A, x=75 for 6B).
+  // Left:  start at top-right corner (180,0), travel left, end at
+  //        bottom-left (20,56) with tangent pointing straight down so
+  //        the chevron tip points cleanly down at 6A's top edge.
+  // Right: mirrored.
   const path =
     side === "left"
-      ? "M 50 0 C 50 30 25 30 25 50"
-      : "M 50 0 C 50 30 75 30 75 50";
+      ? "M 180 0 C 120 0 20 28 20 56"
+      : "M 0 0 C 60 0 160 28 160 56";
+  const positionStyle =
+    side === "left"
+      ? { right: "calc(50% + 4px)" }
+      : { left: "calc(50% + 4px)" };
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute left-0 top-full z-10 hidden w-full lg:block"
-      style={{ height: 56 }}
+      className="pointer-events-none absolute top-full z-10 hidden lg:block"
+      style={{ ...positionStyle, width: 180, height: 64 }}
     >
       <svg
-        viewBox="0 0 100 56"
-        preserveAspectRatio="none"
-        className="size-full text-accent opacity-0 transition-opacity duration-300 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100"
+        viewBox="0 0 180 64"
+        className="size-full text-accent/40 transition-[color,filter] duration-300 ease-out group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
         style={{ overflow: "visible" }}
       >
         <defs>
@@ -262,7 +265,6 @@ function ForkArrow({
           stroke="currentColor"
           strokeWidth={3.5}
           strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
           markerEnd={`url(#${markerId})`}
         />
       </svg>
