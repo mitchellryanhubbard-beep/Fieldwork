@@ -38,6 +38,14 @@ export function writeProcedureBoxes(
       : layout.firstSectionRow - 1;
     if (targetRow < 1) continue;
 
+    // Never overwrite an existing row. If the target row already has
+    // any content in the box's column range (labels, headers, data
+    // — anything the auditor put there), skip placement on this sheet
+    // rather than wipe their work.
+    if (rowHasContent(sheet, targetRow, layout.firstSectionCol, layout.maxCol)) {
+      continue;
+    }
+
     if (
       writeBoxedText(
         sheet,
@@ -51,6 +59,19 @@ export function writeProcedureBoxes(
     }
   }
   return modified;
+}
+
+function rowHasContent(
+  sheet: ExcelJS.Worksheet,
+  row: number,
+  startCol: number,
+  endCol: number,
+): boolean {
+  const r = sheet.getRow(row);
+  for (let c = startCol; c <= endCol; c++) {
+    if (readText(r.getCell(c)).trim()) return true;
+  }
+  return false;
 }
 
 // Finds the row that holds the workpaper-title line — identified by
