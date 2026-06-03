@@ -754,16 +754,25 @@ function fillFreshData(
         }
       } else if (kind.kind === "trend" && trendValues) {
         if (kind.metric === "dso") {
-          // Write as a formula referencing the AR and Revenue rows in
-          // this same fresh column.
-          const arRow = findMetricRow(rowKinds, "ar");
+          // Prefer gross AR row → net AR → plain AR for the numerator
+          // so the DSO formula matches whatever the workpaper labels.
+          const grossArRow = findMetricRow(rowKinds, "grossAr");
+          const netArRow = findMetricRow(rowKinds, "netAr");
+          const plainArRow = findMetricRow(rowKinds, "ar");
+          const arRow = grossArRow ?? netArRow ?? plainArRow;
+          const arVal =
+            grossArRow != null
+              ? trendValues.grossAr
+              : netArRow != null
+                ? trendValues.netAr
+                : trendValues.ar;
           const revRow = findMetricRow(rowKinds, "revenue");
           if (arRow && revRow) {
             const colL = colNumToLetter(fresh.col);
             const rawDso =
               trendValues.revenue === 0
                 ? 0
-                : (trendValues.ar / trendValues.revenue) * 365;
+                : (arVal / trendValues.revenue) * 365;
             cell.value = {
               formula: `ROUND(${colL}${arRow}/${colL}${revRow}*365,1)`,
               result: Math.round(rawDso * 10) / 10,
@@ -772,6 +781,27 @@ function fillFreshData(
           }
         } else if (kind.metric === "revenue") {
           cell.value = trendValues.revenue;
+          count += 1;
+        } else if (kind.metric === "grossAr") {
+          cell.value = trendValues.grossAr;
+          count += 1;
+        } else if (kind.metric === "allowance") {
+          cell.value = trendValues.allowance;
+          count += 1;
+        } else if (kind.metric === "netAr") {
+          // Write as gross + allowance formula when both rows are
+          // present so the math stays auditable in the cell.
+          const grossArRow = findMetricRow(rowKinds, "grossAr");
+          const allowanceRow = findMetricRow(rowKinds, "allowance");
+          if (grossArRow != null && allowanceRow != null) {
+            const colL = colNumToLetter(fresh.col);
+            cell.value = {
+              formula: `${colL}${grossArRow}+${colL}${allowanceRow}`,
+              result: trendValues.netAr,
+            };
+          } else {
+            cell.value = trendValues.netAr;
+          }
           count += 1;
         } else if (kind.metric === "ar") {
           cell.value = trendValues.ar;
@@ -1027,33 +1057,58 @@ function computeAgingTotals(aging: ArAging): {
 // Trend metric helpers (Revenue, AR, DSO, Industry)
 // ---------------------------------------------------------------------------
 
-type TrendMetric = "revenue" | "ar" | "dso" | "industry";
+type TrendMetric =
+  | "revenue"
+  | "ar"
+  | "grossAr"
+  | "allowance"
+  | "netAr"
+  | "dso"
+  | "industry";
 
 function matchTrendMetric(label: string): TrendMetric | null {
   const l = label.toLowerCase().trim();
   if (!l) return null;
-  if (/^(revenue|sales)(\s*[,\-:(–—]|\s*$)/.test(l)) return "revenue";
-  if (/^(ar|a\/r|accounts\s+receivable)(\s*[,\-:(–—]|\s*$)/.test(l))
+  // Order matters: more-specific patterns first.
+  if (/^gross\s+(trade\s+receivables?|accounts?\s+receivable|ar|a\/r)\b/.test(l))
+    return "grossAr";
+  if (/allowance(\s+for)?\s+doubtful|less:?\s+allowance/.test(l))
+    return "allowance";
+  if (/^net\s+(trade\s+receivables?|accounts?\s+receivable|ar|a\/r)\b/.test(l))
+    return "netAr";
+  if (/^(net\s+|gross\s+)?(revenue|sales)\b/.test(l)) return "revenue";
+  if (/^(ar|a\/r|accounts?\s+receivable|trade\s+receivables?)\b/.test(l))
     return "ar";
-  if (/^dso(\s*[,\-:(–—]|\s+\(|\s*$)/.test(l)) return "dso";
-  if (/^industry(\s+(benchmark|avg|average)|\s*$)/.test(l)) return "industry";
+  if (/^dso\b/.test(l)) return "dso";
+  if (/^(industry|benchmark)\b/.test(l)) return "industry";
   return null;
 }
 
 function computeTrendValues(tb: TrialBalance): {
   revenue: number;
   ar: number;
+  grossAr: number;
+  allowance: number;
+  netAr: number;
 } {
   let revenue = 0;
-  let ar = 0;
+  let grossAr = 0;
+  let allowance = 0;
   for (const a of tb.accounts) {
     if (a.section === "Revenue") revenue += a.cyBalance;
-    if (/accounts\s+receivable|^a\/r$|^ar$/i.test(a.name)) ar += a.cyBalance;
+    if (/allowance(\s+for)?\s+doubtful/i.test(a.name)) {
+      allowance += a.cyBalance; // stored negative in TB
+    } else if (
+      /accounts?\s+receivable|trade\s+receivables?|^a\/r$|^ar$/i.test(a.name)
+    ) {
+      grossAr += a.cyBalance;
+    }
   }
   // Revenue convention: TB stores revenue as negative (credit). Flip to
   // positive for display.
   if (revenue < 0) revenue = -revenue;
-  return { revenue, ar };
+  const netAr = grossAr + allowance; // allowance is negative → subtraction
+  return { revenue, ar: grossAr, grossAr, allowance, netAr };
 }
 
 function findMetricRow(
