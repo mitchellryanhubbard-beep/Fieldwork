@@ -47,13 +47,62 @@ export async function parseSubsequentCashReceipts(
   const sheet = wb.worksheets[0];
   if (!sheet) throw new Error("SCR file has no worksheets");
 
-  const periodLabel = readText(sheet, 3, 1).trim() || null;
+  const periodLabel = scanForPeriodLabel(sheet);
+
+  // 1) Hartwell-style invoice-application schedule (receipt → invoice
+  //    with applied-in-full / remaining-balance columns). This is the
+  //    richest format because it ties each receipt to a specific pre-
+  //    period invoice.
+  const invoiceReceipts = parseInvoiceApplication(sheet);
+  if (invoiceReceipts.length > 0) {
+    const total = invoiceReceipts.reduce((a, r) => a + r.amountReceived, 0);
+    return { periodLabel, receipts: invoiceReceipts, totalReceived: total };
+  }
+
+  // 2) Bank-statement layout with separate Debit (deposits) + Credit
+  //    (payments) columns. We treat every Debit row as a receipt and
+  //    ignore Credit rows (those are cash *out*, not subsequent
+  //    receipts). Invoice linkage isn't available in this format.
+  const bankReceipts = parseBankStatementDebitCredit(sheet);
+  if (bankReceipts.length > 0) {
+    const total = bankReceipts.reduce((a, r) => a + r.amountReceived, 0);
+    return { periodLabel, receipts: bankReceipts, totalReceived: total };
+  }
+
+  // 3) Single signed-amount column (e.g., positive = receipt, negative
+  //    = refund). We keep only positive amounts.
+  const signedReceipts = parseSignedAmountColumn(sheet);
+  if (signedReceipts.length > 0) {
+    const total = signedReceipts.reduce((a, r) => a + r.amountReceived, 0);
+    return { periodLabel, receipts: signedReceipts, totalReceived: total };
+  }
+
+  throw new Error(
+    "SCR xlsx layout was not recognised. Expected an invoice-application schedule (Receipt # | Customer | Invoice | Amount Received …), a bank-statement detail with Debit + Credit columns, or a single signed Amount column.",
+  );
+}
+
+// Hartwell layout: receipt → invoice with applied-in-full + remaining
+// balance. We only run this parser when the header row carries
+// invoice-application keywords (Receipt #, Invoice Applied, Amount
+// Received). Otherwise rows from a bank-statement layout would get
+// silently misread as invoice rows.
+function parseInvoiceApplication(sheet: ExcelJS.Worksheet): ScrReceipt[] {
+  const header = findHeaderRow(sheet, (h) => {
+    const has = (re: RegExp) =>
+      Array.from(h.values()).some((cell) => re.test(cell));
+    return (
+      has(/^receipt\s*#/i) &&
+      has(/^invoice/i) &&
+      has(/amount\s+(received|applied)/i)
+    );
+  });
+  if (header == null) return [];
 
   const receipts: ScrReceipt[] = [];
-  for (let r = 8; r <= sheet.rowCount; r++) {
+  for (let r = header + 1; r <= sheet.rowCount; r++) {
     const receiptNum = readText(sheet, r, 1).trim();
     const customerName = readText(sheet, r, 2).trim();
-
     if (!receiptNum) continue;
     if (/^total\b/i.test(receiptNum)) continue;
     if (/^auditor note/i.test(receiptNum)) continue;
@@ -73,9 +122,204 @@ export async function parseSubsequentCashReceipts(
       notes: readText(sheet, r, 10).trim(),
     });
   }
+  return receipts;
+}
 
-  const totalReceived = receipts.reduce((acc, r) => acc + r.amountReceived, 0);
-  return { periodLabel, receipts, totalReceived };
+// Marigold layout: bank-statement detail. One Debit column (deposits =
+// cash in = receipts) and one Credit column (payments = cash out). We
+// build a synthetic receipt per Debit row using the date, payee/source,
+// and ref. Credit rows are dropped — they aren't subsequent receipts.
+function parseBankStatementDebitCredit(
+  sheet: ExcelJS.Worksheet,
+): ScrReceipt[] {
+  const header = findHeaderRow(sheet, (h) => {
+    const has = (re: RegExp) =>
+      Array.from(h.values()).some((cell) => re.test(cell));
+    return (
+      has(/^date\b/i) &&
+      has(/\b(debit|deposit|dr)\b/i) &&
+      has(/\b(credit|payment|cr)\b/i)
+    );
+  });
+  if (header == null) return [];
+
+  const map = mapBankColumns(sheet, header);
+  if (map.date == null || map.debit == null) return [];
+
+  const receipts: ScrReceipt[] = [];
+  for (let r = header + 1; r <= sheet.rowCount; r++) {
+    const debit = readNumber(sheet, r, map.debit);
+    if (debit <= 0) continue; // skip credits (cash out) and empty rows
+
+    const date = parseDateCell(sheet.getRow(r).getCell(map.date).value);
+    const payee = map.payee != null ? readText(sheet, r, map.payee).trim() : "";
+    const description =
+      map.description != null
+        ? readText(sheet, r, map.description).trim()
+        : "";
+    const ref = map.ref != null ? readText(sheet, r, map.ref).trim() : "";
+
+    // Skip header/total/note rows that snuck past the value filter.
+    if (/^total\b/i.test(payee) || /^total\b/i.test(description)) continue;
+
+    receipts.push({
+      receiptNum: ref || `DEP-${date ?? r}`,
+      customerName: payee || description || "(unattributed deposit)",
+      invoiceNum: "",
+      invoiceDate: null,
+      invoiceAmount: 0,
+      receiptDate: date,
+      amountReceived: debit,
+      appliedInFull: false,
+      remainingBalance: 0,
+      notes: description,
+    });
+  }
+  return receipts;
+}
+
+// Single-amount layout: one signed Amount column. Positive = receipt,
+// negative = refund (dropped).
+function parseSignedAmountColumn(
+  sheet: ExcelJS.Worksheet,
+): ScrReceipt[] {
+  const header = findHeaderRow(sheet, (h) => {
+    const has = (re: RegExp) =>
+      Array.from(h.values()).some((cell) => re.test(cell));
+    return (
+      has(/^date\b/i) &&
+      has(/^(amount|received|total)$/i) &&
+      // Disambiguate from the bank-statement layout — only one money
+      // column allowed.
+      !has(/\b(debit|deposit|dr)\b/i) &&
+      !has(/\b(credit|payment|cr)\b/i)
+    );
+  });
+  if (header == null) return [];
+
+  let dateCol: number | null = null;
+  let amountCol: number | null = null;
+  let payeeCol: number | null = null;
+  let refCol: number | null = null;
+  let descCol: number | null = null;
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let c = 1; c <= maxCol; c++) {
+    const h = readText(sheet, header, c).trim().toLowerCase();
+    if (!h) continue;
+    if (dateCol == null && /^date\b/.test(h)) dateCol = c;
+    else if (amountCol == null && /^(amount|received|total)$/.test(h))
+      amountCol = c;
+    else if (payeeCol == null && /^(payee|source|received from|customer)/.test(h))
+      payeeCol = c;
+    else if (refCol == null && /^(ref|check\s*#|receipt\s*#)/.test(h))
+      refCol = c;
+    else if (descCol == null && /^description/.test(h)) descCol = c;
+  }
+  if (dateCol == null || amountCol == null) return [];
+
+  const receipts: ScrReceipt[] = [];
+  for (let r = header + 1; r <= sheet.rowCount; r++) {
+    const amount = readNumber(sheet, r, amountCol);
+    if (amount <= 0) continue;
+
+    const date = parseDateCell(sheet.getRow(r).getCell(dateCol).value);
+    const payee = payeeCol != null ? readText(sheet, r, payeeCol).trim() : "";
+    const description = descCol != null ? readText(sheet, r, descCol).trim() : "";
+    const ref = refCol != null ? readText(sheet, r, refCol).trim() : "";
+
+    if (/^total\b/i.test(payee) || /^total\b/i.test(description)) continue;
+
+    receipts.push({
+      receiptNum: ref || `R-${date ?? r}`,
+      customerName: payee || description || "(unattributed)",
+      invoiceNum: "",
+      invoiceDate: null,
+      invoiceAmount: 0,
+      receiptDate: date,
+      amountReceived: amount,
+      appliedInFull: false,
+      remainingBalance: 0,
+      notes: description,
+    });
+  }
+  return receipts;
+}
+
+type BankColumns = {
+  date?: number;
+  payee?: number;
+  description?: number;
+  ref?: number;
+  debit?: number;
+  credit?: number;
+};
+
+function mapBankColumns(
+  sheet: ExcelJS.Worksheet,
+  headerRow: number,
+): BankColumns {
+  const map: BankColumns = {};
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let c = 1; c <= maxCol; c++) {
+    const h = readText(sheet, headerRow, c).trim().toLowerCase();
+    if (!h) continue;
+    if (map.date == null && /^date\b/.test(h)) map.date = c;
+    else if (
+      map.payee == null &&
+      /^(payee|source|received from|customer|payee\s*\/\s*source)/.test(h)
+    )
+      map.payee = c;
+    else if (map.description == null && /^description/.test(h))
+      map.description = c;
+    else if (
+      map.ref == null &&
+      /^(ref|check|ref\s*\/\s*check)/.test(h)
+    )
+      map.ref = c;
+    else if (map.debit == null && /\b(debit|deposit|dr)\b/.test(h))
+      map.debit = c;
+    else if (map.credit == null && /\b(credit|payment|cr)\b/.test(h))
+      map.credit = c;
+  }
+  return map;
+}
+
+// Scans the top 20 rows for the first row that matches the supplied
+// predicate (testing lower-cased trimmed cell text). Returns the row
+// number (1-indexed) or null.
+function findHeaderRow(
+  sheet: ExcelJS.Worksheet,
+  predicate: (cells: Map<number, string>) => boolean,
+): number | null {
+  const maxRow = Math.min(20, sheet.rowCount);
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let r = 1; r <= maxRow; r++) {
+    const cells = new Map<number, string>();
+    for (let c = 1; c <= maxCol; c++) {
+      const h = readText(sheet, r, c).trim().toLowerCase();
+      if (h) cells.set(c, h);
+    }
+    if (predicate(cells)) return r;
+  }
+  return null;
+}
+
+// Look in the first six rows for a period banner ("January 1–31, 2026
+// — Subsequent…", "January 2025 …", etc.). Returns the longest non-
+// trivial line so the auditor's eyeballed banner survives.
+function scanForPeriodLabel(sheet: ExcelJS.Worksheet): string | null {
+  const maxRow = Math.min(6, sheet.rowCount);
+  let best: string | null = null;
+  for (let r = 1; r <= maxRow; r++) {
+    const text = readText(sheet, r, 1).trim();
+    if (!text) continue;
+    if (/january|february|march|april|may|june|july|august|september|october|november|december|jan\b|feb\b|mar\b|apr\b|jun\b|jul\b|aug\b|sep\b|oct\b|nov\b|dec\b/i.test(
+      text,
+    )) {
+      if (!best || text.length > best.length) best = text;
+    }
+  }
+  return best;
 }
 
 function readText(sheet: ExcelJS.Worksheet, row: number, col: number): string {
