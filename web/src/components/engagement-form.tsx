@@ -225,7 +225,7 @@ export function EngagementForm({
       <NumberedSection
         n={n0 + 2}
         title="Planning & Risk Questionnaire"
-        description="Identify current-year significant business changes, identify CY audit risks, and give the AI context to modify the audit approach from PY."
+        description="Identify current-year significant business changes, identify CY audit risks, and give the AI context to modify the audit approach from PY. Expand each section below and answer the questions accordingly."
       >
         <div className="space-y-3 rounded-xl border border-primary/10 bg-card p-5">
           {PLANNING_QUESTIONNAIRE.map((group) => (
