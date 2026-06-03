@@ -19,6 +19,67 @@ const STEPS = [
   },
 ];
 
+function CardFireworks() {
+  // Three gold firework bursts that pop on card hover. Each burst is an
+  // outline-only SVG (no fill on the rays) that scales up + fades in with
+  // a stagger so the eye reads "boom… boom… boom" instead of one flash.
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-10 hidden lg:block"
+    >
+      <Burst className="absolute -top-6 -left-4 size-12" delay={0} />
+      <Burst className="absolute -top-8 -right-2 size-14" delay={120} />
+      <Burst className="absolute -bottom-6 right-6 size-10" delay={240} />
+    </span>
+  );
+}
+
+function Burst({
+  className,
+  delay,
+}: {
+  className: string;
+  delay: number;
+}) {
+  return (
+    <svg
+      viewBox="0 0 60 60"
+      className={`${className} text-accent opacity-0 scale-0 origin-center transition duration-500 ease-out drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)] group-hover:opacity-100 group-hover:scale-100`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {/* Outline rays — eight radiating strokes from a center dot */}
+      <g
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        fill="none"
+      >
+        <line x1="30" y1="30" x2="30" y2="6" />
+        <line x1="30" y1="30" x2="48" y2="12" />
+        <line x1="30" y1="30" x2="54" y2="30" />
+        <line x1="30" y1="30" x2="48" y2="48" />
+        <line x1="30" y1="30" x2="30" y2="54" />
+        <line x1="30" y1="30" x2="12" y2="48" />
+        <line x1="30" y1="30" x2="6" y2="30" />
+        <line x1="30" y1="30" x2="12" y2="12" />
+      </g>
+      {/* Sparkle tips at the end of each ray + a small center pop */}
+      <g fill="currentColor">
+        <circle cx="30" cy="30" r="1.4" />
+        <circle cx="30" cy="4" r="1" />
+        <circle cx="50" cy="10" r="1" />
+        <circle cx="56" cy="30" r="1" />
+        <circle cx="50" cy="50" r="1" />
+        <circle cx="30" cy="56" r="1" />
+        <circle cx="10" cy="50" r="1" />
+        <circle cx="4" cy="30" r="1" />
+        <circle cx="10" cy="10" r="1" />
+      </g>
+    </svg>
+  );
+}
+
 function StepArrow({
   kind,
   index,
@@ -118,8 +179,14 @@ export function HowItWorks() {
                   curve direction (over → under → over) so the eye
                   weaves down-up-down across the row when scanning. Path
                   is drawn left→right with a marker-end arrowhead so the
-                  tip auto-orients to the curve's tangent. */}
-              {i < STEPS.length - 1 ? <StepArrow kind={i % 2 === 0 ? "over" : "under"} index={i} /> : null}
+                  tip auto-orients to the curve's tangent. The final card
+                  has no "next" step — instead, gold firework bursts
+                  celebrate landing on substantive testing. */}
+              {i < STEPS.length - 1 ? (
+                <StepArrow kind={i % 2 === 0 ? "over" : "under"} index={i} />
+              ) : (
+                <CardFireworks />
+              )}
             </li>
           ))}
         </ol>
