@@ -33,7 +33,7 @@ export async function SiteHeader({ variant }: SiteHeaderProps) {
             className="size-7"
           />
           <span>
-            First-Pass
+            First-Pass<span className="text-accent">.io</span>
           </span>
         </Link>
 
