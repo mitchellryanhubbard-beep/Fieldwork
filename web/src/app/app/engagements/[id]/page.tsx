@@ -152,52 +152,58 @@ export default async function EditEngagementPage({
               current={detail.cyTrialBalanceFile}
               verification={verifications.cy_tb}
             />
-
-            <FsliBreakdown
-              engagementId={id}
-              schedulesByFsli={{
-                "accounts-receivable": (
-                  <div className="space-y-4">
-                    <FileUpload
-                      engagementId={id}
-                      kind="ar_aging"
-                      title="AR Aging — by Customer + Invoice"
-                      description="Open AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data on upload."
-                      accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
-                      current={detail.arAgingFile}
-                      verification={verifications.ar_aging}
-                    />
-                    <FileUpload
-                      engagementId={id}
-                      kind="subsequent_cash_receipts"
-                      title="Subsequent Cash Receipts"
-                      description="Cash receipts collected after the balance-sheet date, applied against pre-YE invoices. Powers the Existence + Valuation substantive test (receipt-to-invoice matching, % collected within 30/60 days, aged-uncollected flagging)."
-                      accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
-                      current={detail.subsequentCashReceiptsFile}
-                      verification={verifications.subsequent_cash_receipts}
-                    />
-                  </div>
-                ),
-              }}
-              workpapersByFsli={{
-                "accounts-receivable": (
-                  <div className="space-y-3">
-                    <p className="text-xs text-foreground/60">
-                      PY files can be uploaded for reference or rolled forward
-                      into the CY pane. Each scoped account gets its own
-                      workpaper and confirmation request set.
-                    </p>
-                    <Link
-                      href={`/app/engagements/${id}/workpapers`}
-                      className={`${buttonVariants({ variant: "gold", size: "sm" })} w-fit`}
-                    >
-                      Open AR workpapers →
-                    </Link>
-                  </div>
-                ),
-              }}
-            />
           </div>
+        </NumberedSection>
+
+        <NumberedSection
+          n={5}
+          title="Support and Workpapers"
+          description="Source documents and workpapers organized by financial-statement line item. Expand each FSLI to upload its supporting schedules and open its workpapers."
+        >
+          <FsliBreakdown
+            engagementId={id}
+            schedulesByFsli={{
+              "accounts-receivable": (
+                <div className="space-y-4">
+                  <FileUpload
+                    engagementId={id}
+                    kind="ar_aging"
+                    title="AR Aging — by Customer + Invoice"
+                    description="Open AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data on upload."
+                    accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
+                    current={detail.arAgingFile}
+                    verification={verifications.ar_aging}
+                  />
+                  <FileUpload
+                    engagementId={id}
+                    kind="subsequent_cash_receipts"
+                    title="Subsequent Cash Receipts"
+                    description="Cash receipts collected after the balance-sheet date, applied against pre-YE invoices. Powers the Existence + Valuation substantive test (receipt-to-invoice matching, % collected within 30/60 days, aged-uncollected flagging)."
+                    accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
+                    current={detail.subsequentCashReceiptsFile}
+                    verification={verifications.subsequent_cash_receipts}
+                  />
+                </div>
+              ),
+            }}
+            workpapersByFsli={{
+              "accounts-receivable": (
+                <div className="space-y-3">
+                  <p className="text-xs text-foreground/60">
+                    PY files can be uploaded for reference or rolled forward
+                    into the CY pane. Each scoped account gets its own
+                    workpaper and confirmation request set.
+                  </p>
+                  <Link
+                    href={`/app/engagements/${id}/workpapers`}
+                    className={`${buttonVariants({ variant: "gold", size: "sm" })} w-fit`}
+                  >
+                    Open AR workpapers →
+                  </Link>
+                </div>
+              ),
+            }}
+          />
         </NumberedSection>
       </div>
     </main>
@@ -230,14 +236,7 @@ function FsliBreakdown({
 }: FsliBreakdownProps) {
   return (
     <div className="rounded-xl border border-primary/10 bg-card p-5">
-      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-        Support and Workpapers
-      </h3>
-      <p className="mt-1 text-xs text-foreground/60">
-        Source documents and workpapers organized by financial-statement line
-        item.
-      </p>
-      <ul className="mt-4 space-y-2">
+      <ul className="space-y-2">
         {FSLIS.map((f) => (
           <li key={f.slug}>
             <details className="group rounded-md border border-primary/10 bg-background/60">
