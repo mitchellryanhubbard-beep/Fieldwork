@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -42,6 +42,23 @@ export function FileUpload({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Scroll-position bookkeeping. Native router.refresh() preserves the
+  // window scroll, but content can collapse around the user (the FSLI
+  // <details> elements can re-mount on data change) and the browser
+  // clamps scroll near the top of the new shorter document. We snapshot
+  // scrollY before the upload fires and restore it once the transition
+  // completes so the auditor stays where they were.
+  const scrollPosRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isPending || scrollPosRef.current == null) return;
+    const y = scrollPosRef.current;
+    scrollPosRef.current = null;
+    // Wait one frame so the refreshed DOM has laid out before scrolling.
+    requestAnimationFrame(() => {
+      window.scrollTo(0, y);
+    });
+  }, [isPending]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,6 +68,7 @@ export function FileUpload({
       setError("Choose a file first.");
       return;
     }
+    scrollPosRef.current = window.scrollY;
     const form = new FormData();
     form.append("engagementId", engagementId);
     form.append("kind", kind);
