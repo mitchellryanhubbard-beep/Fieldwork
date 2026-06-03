@@ -1,4 +1,4 @@
--- Fieldwork Engagement Setup — initial schema (idempotent).
+-- First-Pass Engagement Setup — initial schema (idempotent).
 -- Safe to re-run: drops the four engagement tables + enums, then recreates.
 -- Tables mirror the JSON Schema at specs/engagement-setup.schema.json.
 -- RLS is enabled on every table. v1 access is server-only via service role.

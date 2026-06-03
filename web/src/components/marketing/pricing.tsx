@@ -27,7 +27,7 @@ const TIERS: Tier[] = [
     name: "Pro",
     price: "$499",
     cadence: "/user/mo",
-    desc: "Full testing workflows and integrations. The full Fieldwork.",
+    desc: "Full testing workflows and integrations. The full First-Pass.",
     cta: "Start free trial",
     ctaHref: "/app/engagements/new",
     ctaVariant: "gold",

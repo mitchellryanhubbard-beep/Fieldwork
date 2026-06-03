@@ -16,9 +16,9 @@ import type {
 //
 // Anything else on the page (scoping notes, PY exception flags, auditor
 // commentary, materiality decisions) is intentionally discarded. Per the
-// scoping-principle memory: Fieldwork produces its own scoping — never
+// scoping-principle memory: First-Pass produces its own scoping — never
 // take it from client-authored TB columns. Letting that data through
-// contaminates Fieldwork's judgment.
+// contaminates First-Pass's judgment.
 //
 // Section is required so the Revenue sum (used in DSO + analytics) ties.
 // The prompt nudges Claude to infer it from acct-number prefix when no
@@ -33,7 +33,7 @@ const SYSTEM_PROMPT =
   "1xxx → Asset, 2xxx → Liability, 3xxx → Equity, 4xxx → Revenue, 5xxx-9xxx → Expense. " +
   "Balances are USD numbers. Negative balances stay negative. Use 0 for blank/missing balances. " +
   "Extract ONLY the five fields in the schema — ignore any scoping notes, exception flags, " +
-  "materiality columns, or auditor commentary on the page. Those are not useful to Fieldwork.";
+  "materiality columns, or auditor commentary on the page. Those are not useful to First-Pass.";
 
 const TB_JSON_SCHEMA = {
   type: "object",

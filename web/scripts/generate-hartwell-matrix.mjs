@@ -219,7 +219,7 @@ console.log(`✓ readable Markdown → ${mdPath}`);
 
 // --- save as xlsx (re-implemented inline so this script stays SDK-free) ---
 const wb = new ExcelJS.Workbook();
-wb.creator = "Fieldwork";
+wb.creator = "First-Pass";
 wb.created = new Date(m.generatedAt);
 const sheet = wb.addWorksheet("Assertion Plan", { views: [{ state: "frozen", ySplit: 1 }] });
 
@@ -259,7 +259,7 @@ const flatRows = m.rows.map((r, i) => ({
 // addTable handles BOTH headers and rows; do NOT also call sheet.columns or
 // addRows or you'll double-write and the data column gets mangled.
 sheet.addTable({
-  name: "FieldworkAssertionPlan",
+  name: "FirstPassAssertionPlan",
   ref: "A1",
   headerRow: true,
   style: { theme: "TableStyleMedium2", showRowStripes: true },

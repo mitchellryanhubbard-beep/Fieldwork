@@ -8,11 +8,11 @@ import {
 // Render an AssertionMatrix as a workbook buffer ready to write or stream.
 // Layout: one sheet ("Assertion Plan") with a real Excel Table; second sheet
 // ("Engagement Notes") with the model's caveats. The Table carries a named
-// range ("FieldworkAssertionPlan") so downstream workpaper generation (M3)
+// range ("FirstPassAssertionPlan") so downstream workpaper generation (M3)
 // can reference it without scanning cells.
 export async function matrixToXlsx(matrix: AssertionMatrix): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Fieldwork";
+  wb.creator = "First-Pass";
   wb.created = new Date(matrix.generatedAt);
 
   const sheet = wb.addWorksheet("Assertion Plan", {
@@ -69,7 +69,7 @@ export async function matrixToXlsx(matrix: AssertionMatrix): Promise<Buffer> {
 
   // Make it a real Excel Table so auditors can sort/filter natively.
   sheet.addTable({
-    name: "FieldworkAssertionPlan",
+    name: "FirstPassAssertionPlan",
     ref: "A1",
     headerRow: true,
     style: {

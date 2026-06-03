@@ -1,4 +1,4 @@
-# CLAUDE.md — Fieldwork
+# CLAUDE.md — First-Pass
 
 ## Product
 First-pass audit automation that lives natively in Excel. Replaces staff-auditor grunt work on workpaper design, scoping, lead sheets, risk and assertion mapping, substantive detail testing, and analytical procedures. Flags exceptions for human review — never auto-concludes.

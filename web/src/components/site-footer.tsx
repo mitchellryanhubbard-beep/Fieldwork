@@ -6,10 +6,10 @@ export function SiteFooter() {
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <p className="font-display text-lg font-semibold text-primary">
-            FIELDWORK
+            FIRST-PASS<span className="text-accent">.io</span>
           </p>
           <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/60">
-            First Pass on Autopilot
+            AI-Native Audit Testing
           </p>
         </div>
         <FooterCol
@@ -40,7 +40,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-primary/10">
         <p className="mx-auto w-full max-w-6xl px-6 py-4 text-xs text-foreground/60">
-          © {new Date().getFullYear()} Fieldwork. All rights reserved.
+          © {new Date().getFullYear()} First-Pass. All rights reserved.
         </p>
       </div>
     </footer>

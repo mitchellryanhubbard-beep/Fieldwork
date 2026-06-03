@@ -89,7 +89,7 @@ export async function generateAccountWorkpaper(
     : DEFAULT_ASSERTIONS_BY_FSLI[fsli] ?? ["Existence", "ValuationAndAllocation"];
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Fieldwork";
+  wb.creator = "First-Pass";
   wb.created = new Date(matrix.generatedAt);
   wb.title = `${engagement.client.name} — ${account.name} Workpaper`;
 

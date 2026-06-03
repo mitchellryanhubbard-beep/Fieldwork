@@ -66,7 +66,7 @@ export async function loadAccountMethodologyRows(
 
 // Returns every account in the requested FSLI from the engagement's TB
 // (AR only in v1). Scoping is NOT derived from any TB column — that's
-// Fieldwork's job, decided downstream via materiality + matrix. See the
+// First-Pass's job, decided downstream via materiality + matrix. See the
 // scoping-principle memory.
 //
 // Reads the canonical TB JSON from the intake layer first (works for any

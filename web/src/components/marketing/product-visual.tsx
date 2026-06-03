@@ -1,8 +1,9 @@
-// Real product visual — a CSS-rendered facsimile of a Fieldwork-generated
-// workpaper (DSO + Aging Analytics for an AR engagement). Uses the brand
-// palette (navy primary, gold accent) and the actual content patterns the
-// generator produces. SVG/CSS rather than a screenshot so it stays sharp
-// at any resolution and survives design-token edits without re-shooting.
+// Real product visual — a CSS-rendered facsimile of a First-Pass-
+// generated workpaper (DSO + Aging Analytics for an AR engagement). Uses
+// the brand palette (navy primary, gold accent) and the actual content
+// patterns the generator produces. SVG/CSS rather than a screenshot so
+// it stays sharp at any resolution and survives design-token edits
+// without re-shooting.
 
 export function ProductVisual() {
   return (
@@ -14,7 +15,7 @@ export function ProductVisual() {
           <span className="size-2.5 rounded-full bg-[#febc2e]" />
           <span className="size-2.5 rounded-full bg-[#28c840]" />
           <div className="ml-3 hidden flex-1 rounded-md bg-primary-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-primary-foreground/55 sm:block">
-            Fieldwork — WP-AR-03 · DSO & Aging Analytics
+            First-Pass — WP-AR-03 · DSO & Aging Analytics
           </div>
         </div>
 

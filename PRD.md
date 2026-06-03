@@ -1,4 +1,4 @@
-# Fieldwork — PRD
+# First-Pass — PRD
 
 ## Problem
 Staff auditors at mid-tier firms spend the majority of their time on repetitive, non-judgment work: building workpapers, mapping risks to assertions, designing sample selections, performing detail tests, and running analytical procedures. The work is slow, error-prone, expensive, and a poor use of trained accountants — but it has to happen on every engagement.
@@ -50,7 +50,7 @@ Staff auditors at mid-tier firms spend the majority of their time on repetitive,
 
 ## Key v1 Decisions (resolved)
 - **Distribution:** Excel copilot task pane (Office.js add-in)
-- **AI backend:** Claude API called through a Fieldwork-owned credential-server proxy — auditors never handle Anthropic keys directly; zero-retention enforced server-side
+- **AI backend:** Claude API called through a First-Pass-owned credential-server proxy — auditors never handle Anthropic keys directly; zero-retention enforced server-side
 - **Pricing:** Per-seat licensing — Starter $249/user/mo (1–5 users), Professional $499/user/mo, Enterprise custom. 14-day free trial (no card during beta), 30-day money-back guarantee
 - **Frameworks:** AICPA, IFRS, and PCAOB — selected per engagement in Engagement Setup; templates differ by framework and industry
 - **Templates:** Industry-specific variants in v1 — Engagement Setup selects framework + industry (Manufacturing, SaaS, NFP, Consumer Business, Real Estate, …) to drive workpaper and assertion-mapping templates

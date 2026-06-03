@@ -36,7 +36,7 @@ export async function generateConfirmationRequests(
   input: ConfirmationRequestsInput,
 ): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Fieldwork";
+  wb.creator = "First-Pass";
   wb.title = `${input.engagement.client.name} — AR Confirmation Requests`;
 
   // Index of invoices by customer #. We only need the ones for selected

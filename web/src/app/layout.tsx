@@ -23,9 +23,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fieldwork — First Pass on Autopilot",
+  title: "First-Pass — AI-Native Audit Testing",
   description:
-    "An Excel-native audit copilot. Generates workpapers, designs samples, runs analytics, and flags exceptions — without leaving the workbook.",
+    "An AI-native audit copilot. First-Pass generates workpapers, designs samples, runs analytics, and flags exceptions — without leaving Excel.",
 };
 
 export default function RootLayout({

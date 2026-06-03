@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Default model for Fieldwork. Picked deliberately: assertion-risk mapping,
+// Default model for First-Pass. Picked deliberately: assertion-risk mapping,
 // workpaper generation, and exception flagging are all judgment-adjacent
 // reasoning tasks where higher capability pays off, and the per-engagement
 // volume is moderate. Override per call site if a workflow genuinely benefits

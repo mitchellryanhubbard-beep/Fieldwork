@@ -309,7 +309,7 @@ export async function generateWorkpaperBinder(
   const { engagement, matrix, trialBalance } = input;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Fieldwork";
+  wb.creator = "First-Pass";
   wb.created = new Date(matrix.generatedAt);
   wb.title = `${engagement.client.name} — FY${engagement.client.fiscalYearEnd.slice(0, 4)} Workpapers`;
 
@@ -375,7 +375,7 @@ function buildScopingSheet(
 
   // Account selection block.
   //
-  // Scope is Fieldwork-derived — never read from a TB column. Two signals
+  // Scope is First-Pass-derived — never read from a TB column. Two signals
   // feed the decision:
   //   1. Materiality (PM):    |CY balance| > PM → coverage required
   //   2. Assertion matrix:    matrix row exists → risk-driven scoping
@@ -386,7 +386,7 @@ function buildScopingSheet(
   // The auditor can override either column post-generation.
   sectionHeader(sheet, "Account Selection");
   sheet.addRow([
-    "Scope is derived from Fieldwork: balance vs. performance materiality + assertion-matrix coverage. " +
+    "Scope is derived from First-Pass: balance vs. performance materiality + assertion-matrix coverage. " +
       "Override the Scope or Rationale columns directly if your judgment differs.",
   ]).font = { italic: true, color: { argb: "FF555555" } };
 
@@ -537,7 +537,7 @@ function buildAssertionPlanSheet(wb: ExcelJS.Workbook, matrix: AssertionMatrix) 
   ]);
 
   sheet.addTable({
-    name: "FieldworkAssertionPlan",
+    name: "FirstPassAssertionPlan",
     ref: "A1",
     headerRow: true,
     style: { theme: "TableStyleMedium2", showRowStripes: true },

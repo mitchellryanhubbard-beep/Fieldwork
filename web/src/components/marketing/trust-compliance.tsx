@@ -11,7 +11,7 @@ const BULLETS = [
   },
   {
     title: "Never auto-concludes",
-    body: "Fieldwork flags exceptions; auditors form opinions. By design.",
+    body: "First-Pass flags exceptions; auditors form opinions. By design.",
   },
   {
     title: "Framework templates",
