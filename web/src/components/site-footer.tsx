@@ -6,7 +6,7 @@ export function SiteFooter() {
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <p className="font-display text-lg font-semibold text-primary">
-            first-pass<span className="text-accent">.io</span>
+            First-Pass
           </p>
           <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/60">
             AI-Native Audit Testing
