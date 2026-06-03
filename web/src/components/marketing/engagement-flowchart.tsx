@@ -140,20 +140,25 @@ const TIP_PATH = "M -6 -7 Q -3 -3 0 0 Q 3 -3 6 -7";
 // so the eye weaves zig-zag from card to card.
 function SideArrow({
   side,
-  index,
+  index: _index,
 }: {
   side: "left" | "right";
   index: number;
 }) {
-  const markerId = `fw-flow-tip-${side}-${index}`;
   const positionStyle =
     side === "right"
       ? { left: "calc(100% + 6px)" }
       : { right: "calc(100% + 6px)" };
-  // Right side: leave card's right edge, bulge right, re-enter at right.
-  // Left side: mirrored — leave left edge, bulge left, re-enter at left.
-  const path =
-    side === "right" ? "M 4 0 Q 60 28 4 56" : "M 66 0 Q 10 28 66 56";
+  // Three paths drawn as one stroke: the curved body and two
+  // asymmetric wings of the arrowhead. Wings deliberately differ in
+  // angle + length so the tip reads as drawn-by-hand instead of
+  // mathematically reflected.
+  const bodyPath =
+    side === "right" ? "M 4 0 Q 62 26 6 52" : "M 66 0 Q 8 26 64 52";
+  const leftWingPath =
+    side === "right" ? "M -3 41 L 6 52" : "M 55 44 L 64 52";
+  const rightWingPath =
+    side === "right" ? "M 15 45 L 6 52" : "M 73 41 L 64 52";
   return (
     <span
       aria-hidden="true"
@@ -167,41 +172,20 @@ function SideArrow({
     >
       <svg
         viewBox="0 0 70 56"
-        className="size-full origin-center text-accent/40 transition-all duration-300 ease-out group-hover:scale-110 group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
+        className="size-full text-accent/40 transition-colors duration-300 ease-out group-hover:text-accent"
         style={{ overflow: "visible" }}
       >
-        <defs>
-          <marker
-            id={markerId}
-            viewBox="0 0 12 14"
-            refX="11"
-            refY="7"
-            markerWidth="11"
-            markerHeight="13"
-            orient="auto-start-reverse"
-          >
-            {/* Hand-drawn open chevron — two thick stroked lines that
-                meet cleanly at the tip and flick out at the back.
-                Matches the reference green arrow: open silhouette,
-                bold strokes, no fill. */}
-            <path
-              d="M 0 0 Q 4 4 11 7 Q 4 10 0 14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={3}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </marker>
-        </defs>
-        <path
-          d={path}
+        <g
           fill="none"
           stroke="currentColor"
           strokeWidth={3.5}
           strokeLinecap="round"
-          markerEnd={`url(#${markerId})`}
-        />
+          strokeLinejoin="round"
+        >
+          <path d={bodyPath} />
+          <path d={leftWingPath} />
+          <path d={rightWingPath} />
+        </g>
       </svg>
     </span>
   );
@@ -214,20 +198,22 @@ function SideArrow({
 // 4px apart horizontally so the arrows read as separate at the start.
 function ForkArrow({
   side,
-  index,
+  index: _index,
 }: {
   side: "left" | "right";
   index: number;
 }) {
-  const markerId = `fw-flow-fork-${side}-${index}`;
-  // Left:  start at top-right corner (180,0), travel left, end at
-  //        bottom-left (20,56) with tangent pointing straight down so
-  //        the chevron tip points cleanly down at 6A's top edge.
-  // Right: mirrored.
-  const path =
+  // Body + two arrowhead wings drawn as three separate stroked paths.
+  // Wings differ slightly in angle + length so the tip looks like a
+  // sketched flick rather than a perfect reflection.
+  const bodyPath =
     side === "left"
-      ? "M 180 0 C 120 0 20 28 20 56"
-      : "M 0 0 C 60 0 160 28 160 56";
+      ? "M 180 0 C 120 0 22 28 22 56"
+      : "M 0 0 C 60 0 158 28 158 56";
+  const leftWingPath =
+    side === "left" ? "M 13 47 L 22 56" : "M 149 47 L 158 56";
+  const rightWingPath =
+    side === "left" ? "M 31 49 L 22 56" : "M 167 50 L 158 56";
   const positionStyle =
     side === "left"
       ? { right: "calc(50% + 4px)" }
@@ -240,41 +226,20 @@ function ForkArrow({
     >
       <svg
         viewBox="0 0 180 64"
-        className="size-full origin-center text-accent/40 transition-all duration-300 ease-out group-hover:scale-110 group-hover:text-accent group-hover:drop-shadow-[0_2px_6px_rgba(200,160,74,0.55)]"
+        className="size-full text-accent/40 transition-colors duration-300 ease-out group-hover:text-accent"
         style={{ overflow: "visible" }}
       >
-        <defs>
-          <marker
-            id={markerId}
-            viewBox="0 0 12 14"
-            refX="11"
-            refY="7"
-            markerWidth="11"
-            markerHeight="13"
-            orient="auto-start-reverse"
-          >
-            {/* Hand-drawn open chevron — two thick stroked lines that
-                meet cleanly at the tip and flick out at the back.
-                Matches the reference green arrow: open silhouette,
-                bold strokes, no fill. */}
-            <path
-              d="M 0 0 Q 4 4 11 7 Q 4 10 0 14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={3}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </marker>
-        </defs>
-        <path
-          d={path}
+        <g
           fill="none"
           stroke="currentColor"
           strokeWidth={3.5}
           strokeLinecap="round"
-          markerEnd={`url(#${markerId})`}
-        />
+          strokeLinejoin="round"
+        >
+          <path d={bodyPath} />
+          <path d={leftWingPath} />
+          <path d={rightWingPath} />
+        </g>
       </svg>
     </span>
   );
