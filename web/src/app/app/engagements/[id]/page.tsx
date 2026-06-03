@@ -98,12 +98,6 @@ export default async function EditEngagementPage({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/app/engagements/${id}/export`}
-            className={buttonVariants({ variant: "goldOutline" })}
-          >
-            Export JSON
-          </Link>
           <form action={handleDelete}>
             <Button type="submit" variant="destructive">
               Delete
@@ -112,7 +106,7 @@ export default async function EditEngagementPage({
         </div>
       </header>
 
-      <div className="space-y-12">
+      <div className="space-y-6">
         <EngagementForm
           mode="edit"
           defaultValues={detail.values}
