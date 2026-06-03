@@ -158,7 +158,7 @@ export default async function AppHome() {
                     <DeleteEngagementButton
                       clientName={e.clientName}
                       action={handleDelete}
-                      className="flex h-full w-24 shrink-0 items-center justify-center bg-destructive text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/85 disabled:opacity-60"
+                      className="flex h-full w-24 shrink-0 items-center justify-center bg-red-200 text-sm font-medium text-red-900 transition-colors duration-200 hover:bg-red-700 hover:text-white disabled:opacity-60"
                     />
                   </div>
                 </li>
