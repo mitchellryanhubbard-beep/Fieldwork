@@ -83,7 +83,7 @@ export default async function EngagementWorkpapersPage({
 
       <header className="mb-10">
         <h1 className="font-display text-3xl font-medium tracking-tight text-primary">
-          Workpapers
+          Accounts Receivable Workpapers
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-foreground/70">
           <Chip>{FRAMEWORK_LABELS[v.framework]}</Chip>
