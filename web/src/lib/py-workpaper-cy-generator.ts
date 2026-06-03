@@ -16,6 +16,7 @@ import {
   setPyWorkpaperGeneratedCy,
 } from "@/lib/py-workpaper-repo";
 import { regenerateAltProceduresSelections } from "@/lib/alt-procedures-rollforward";
+import { rolloverDsoWorkpaper } from "@/lib/dso-workpaper-rollforward";
 import {
   writeProcedureBoxes,
   hasExistingProcedureBox,
@@ -109,12 +110,19 @@ export async function generateCyWorkpaperById(
 
   const cyYear = parseInt(engagement.client.fiscalYearEnd.slice(0, 4), 10);
 
+  // Bullet-proof DSO-workpaper rollover. Runs BEFORE the generic
+  // year-column engine and claims any DSO sheet by name. The generic
+  // engine then skips claimed sheets so it can't wipe the labels or
+  // misclassify the DSO computation table as a trend table.
+  const dsoResult = rolloverDsoWorkpaper(wb, trialBalance, arAging);
+
   // Process year-labelled columns. Returns total cell-updates + per-row
   // mode info so we know whether to shift narrative dates afterwards.
   const { count: colShiftCount, anyRollforward } = processYearColumns(wb, {
     cyYear,
     aging: arAging,
     trialBalance,
+    skipSheets: dsoResult.handledSheets,
   });
 
   // Roll narrative dates +1 year. Always run — even template-mode files
@@ -473,6 +481,7 @@ type ProcessOptions = {
   cyYear: number;
   aging: ArAging | null;
   trialBalance: TrialBalance | null;
+  skipSheets?: Set<string>;
 };
 
 function processYearColumns(
@@ -483,6 +492,7 @@ function processYearColumns(
   let anyRollforward = false;
 
   for (const sheet of wb.worksheets) {
+    if (opts.skipSheets?.has(sheet.name)) continue;
     const yearCells = findYearHeaderCells(sheet);
     if (yearCells.length === 0) continue;
 
