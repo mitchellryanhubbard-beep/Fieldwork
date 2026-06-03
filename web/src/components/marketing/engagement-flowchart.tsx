@@ -60,7 +60,7 @@ const OPTIONS: Step[] = [
 export function EngagementFlowchart() {
   return (
     <section
-      id="workflow"
+      id="product"
       style={{ backgroundColor: "var(--color-fw-band)" }}
       className="py-20"
     >
