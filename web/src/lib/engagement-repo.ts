@@ -39,13 +39,16 @@ export async function listEngagements(): Promise<EngagementSummary[]> {
   const sb = getServerSupabase();
   const user = await getCurrentUser();
   if (!user) return [];
+  // Order by creation time so the visible numbering on /app stays static:
+  // oldest engagement is #1, second oldest #2, etc. Saving an engagement
+  // would otherwise bubble it to the top under an updated_at sort.
   const { data, error } = await sb
     .from("engagements")
     .select(
-      "id, client_name, fiscal_year_end, framework, industry, updated_at",
+      "id, client_name, fiscal_year_end, framework, industry, updated_at, created_at",
     )
     .eq("owner_id", user.id)
-    .order("updated_at", { ascending: false });
+    .order("created_at", { ascending: true });
 
   if (error) throw new Error(`listEngagements failed: ${error.message}`);
 
