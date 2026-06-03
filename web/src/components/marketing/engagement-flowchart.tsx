@@ -94,7 +94,7 @@ export function EngagementFlowchart() {
 
 function FlowCard({ n, title, body }: Step) {
   return (
-    <div className="flex items-start gap-4 rounded-2xl bg-card p-5 shadow-sm">
+    <div className="flex items-start gap-4 rounded-2xl bg-card p-5 shadow-sm transition-colors duration-200 hover:bg-[#ebe1c8]">
       <span
         aria-hidden="true"
         className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-accent font-mono text-xs font-semibold text-primary"
