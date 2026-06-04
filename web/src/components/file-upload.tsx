@@ -47,21 +47,32 @@ export function FileUpload({
   // Resetting inputRef.current.value alone clears the underlying input
   // but doesn't redraw the picker's display.
   const [pickerKey, setPickerKey] = useState(0);
-  // Scroll-position bookkeeping. Native router.refresh() preserves the
-  // window scroll, but content can collapse around the user (the FSLI
-  // <details> elements can re-mount on data change) and the browser
-  // clamps scroll near the top of the new shorter document. We snapshot
-  // scrollY before the upload fires and restore it once the transition
-  // completes so the auditor stays where they were.
-  const scrollPosRef = useRef<number | null>(null);
+  // Scroll-restoration bookkeeping. After router.refresh() the FSLI
+  // <details> tree can re-render around the user — sometimes the page
+  // shrinks (a details closes), sometimes it grows (the upload card
+  // now shows the verification chip). Restoring an absolute scrollY
+  // misses on both counts. Instead we keep a ref to THIS upload card's
+  // outer div and scroll it back to the same viewport position it had
+  // at the moment of submit. The DOM node is the anchor, so as long
+  // as it still exists post-refresh the user lands back on it.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const targetTopRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (isPending || scrollPosRef.current == null) return;
-    const y = scrollPosRef.current;
-    scrollPosRef.current = null;
-    // Wait one frame so the refreshed DOM has laid out before scrolling.
+    if (isPending || targetTopRef.current == null) return;
+    const targetTop = targetTopRef.current;
+    targetTopRef.current = null;
+    const restore = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const currentTop = el.getBoundingClientRect().top;
+      window.scrollBy({ top: currentTop - targetTop, behavior: "instant" as ScrollBehavior });
+    };
+    // Two frames + a microtask: covers React's commit, the FSLI
+    // details re-render, and any sticky-element height recompute.
     requestAnimationFrame(() => {
-      window.scrollTo(0, y);
+      restore();
+      requestAnimationFrame(restore);
     });
   }, [isPending]);
 
@@ -73,7 +84,10 @@ export function FileUpload({
       setError("Choose a file first.");
       return;
     }
-    scrollPosRef.current = window.scrollY;
+    // Snapshot this card's distance from the top of the viewport so
+    // we can put it back in the same spot after the refresh.
+    const rect = containerRef.current?.getBoundingClientRect();
+    targetTopRef.current = rect ? rect.top : 0;
     const form = new FormData();
     form.append("engagementId", engagementId);
     form.append("kind", kind);
@@ -108,7 +122,10 @@ export function FileUpload({
   }
 
   return (
-    <div className="rounded-xl border border-primary/10 bg-card p-5">
+    <div
+      ref={containerRef}
+      className="rounded-xl border border-primary/10 bg-card p-5"
+    >
       <h3 className="font-display text-lg font-medium text-primary">{title}</h3>
       <p className="mt-1 text-sm text-foreground/70">{description}</p>
       {current ? (
