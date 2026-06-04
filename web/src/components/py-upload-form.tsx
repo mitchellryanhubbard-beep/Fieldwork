@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -17,6 +17,11 @@ export function PyUploadForm({ engagementId }: { engagementId: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Bump after every successful upload so the FilePicker remounts +
+  // resets its internal selected-filename label. Without this the
+  // ghost of the just-uploaded filename hangs around next to
+  // "Choose Files".
+  const [pickerKey, setPickerKey] = useState(0);
 
   function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,6 +46,7 @@ export function PyUploadForm({ engagementId }: { engagementId: string }) {
         { description: "Auto-tagging by FSLI…" },
       );
       if (inputRef.current) inputRef.current.value = "";
+      setPickerKey((k) => k + 1);
       const tagResult = await tagUntaggedPyWorkpapersAction(engagementId);
       if (tagResult.ok) {
         toast.success(`Tagged ${tagResult.tagged ?? 0} workpaper${tagResult.tagged === 1 ? "" : "s"}`, {
@@ -57,6 +63,8 @@ export function PyUploadForm({ engagementId }: { engagementId: string }) {
       className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/10 bg-card p-3"
     >
       <FilePicker
+        key={pickerKey}
+        forceReset={pickerKey}
         ref={inputRef}
         accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         multiple
