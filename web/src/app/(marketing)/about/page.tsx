@@ -29,7 +29,7 @@ export default function AboutPage() {
       <section className="bg-background pb-24 pt-16">
         <div className="mx-auto w-full max-w-3xl space-y-7 px-6 text-lg leading-relaxed text-foreground/80">
           <p>
-            For decades, firms have relied on teams of staff auditors to
+            For decades, audit firms have relied on teams of staff to
             perform the same first-pass testing engagement after
             engagement — selecting samples, inspecting support, documenting
             results, applying tickmarks, and preparing workpapers for review.
