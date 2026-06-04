@@ -65,7 +65,7 @@ export async function createEngagementAction(
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }
-  redirect(`/app/engagements/${newId}`);
+  redirect(`/app/engagements/${newId}#section-4`);
 }
 
 export async function updateEngagementAction(

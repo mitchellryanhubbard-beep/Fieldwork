@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, type Resolver, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
@@ -183,34 +183,19 @@ export function EngagementForm({
             label="Overall materiality (USD)"
             error={form.formState.errors.overallMateriality?.message}
           >
-            <Input
-              type="number"
-              step="1000"
-              min="0"
-              {...form.register("overallMateriality")}
-            />
+            <MoneyInput form={form} name="overallMateriality" />
           </Field>
           <Field
             label="Performance materiality (USD)"
             error={form.formState.errors.performanceMateriality?.message}
           >
-            <Input
-              type="number"
-              step="1000"
-              min="0"
-              {...form.register("performanceMateriality")}
-            />
+            <MoneyInput form={form} name="performanceMateriality" />
           </Field>
           <Field
             label="Clearly trivial threshold (USD)"
             error={form.formState.errors.clearlyTrivialThreshold?.message}
           >
-            <Input
-              type="number"
-              step="1000"
-              min="0"
-              {...form.register("clearlyTrivialThreshold")}
-            />
+            <MoneyInput form={form} name="clearlyTrivialThreshold" />
           </Field>
         </div>
       </NumberedSection>
@@ -349,5 +334,39 @@ function QuestionRow({
         />
       ) : null}
     </div>
+  );
+}
+
+// Displays a numeric form field as $123,456 while keeping the
+// underlying form value a plain number. Strips non-digits on input so
+// the user can type freely; an empty field stores 0.
+function MoneyInput({
+  form,
+  name,
+}: {
+  form: UseFormReturn<EngagementFormValues>;
+  name:
+    | "overallMateriality"
+    | "performanceMateriality"
+    | "clearlyTrivialThreshold";
+}) {
+  const raw = form.watch(name);
+  const value = typeof raw === "number" && raw > 0 ? raw : 0;
+  const display = value > 0 ? `$${value.toLocaleString("en-US")}` : "";
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      placeholder="$0"
+      value={display}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/[^0-9]/g, "");
+        const n = digits === "" ? 0 : parseInt(digits, 10);
+        form.setValue(name, n, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }}
+    />
   );
 }
