@@ -191,7 +191,7 @@ export function FileUpload({
               ? "Parsing…"
               : "Uploading…"
             : current
-              ? "Replace"
+              ? "Upload & Replace"
               : "Upload"}
         </Button>
       </form>
