@@ -192,7 +192,7 @@ export function EngagementForm({
           >
             <Input
               type="number"
-              step="0.01"
+              step="1000"
               min="0"
               {...form.register("overallMateriality")}
             />
@@ -203,7 +203,7 @@ export function EngagementForm({
           >
             <Input
               type="number"
-              step="0.01"
+              step="1000"
               min="0"
               {...form.register("performanceMateriality")}
             />
@@ -214,7 +214,7 @@ export function EngagementForm({
           >
             <Input
               type="number"
-              step="0.01"
+              step="1000"
               min="0"
               {...form.register("clearlyTrivialThreshold")}
             />
