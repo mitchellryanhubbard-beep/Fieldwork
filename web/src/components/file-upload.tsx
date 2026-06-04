@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -58,7 +63,12 @@ export function FileUpload({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const targetTopRef = useRef<number | null>(null);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after commit / before paint so
+  // the first restore lands without a flash of the wrong scroll. The
+  // chained rAFs + setTimeouts pick up any later layout shifts (intake
+  // status chip, FSLI details re-rendering, toast removal) that move
+  // the card after the initial restore.
+  useLayoutEffect(() => {
     if (isPending || targetTopRef.current == null) return;
     const targetTop = targetTopRef.current;
     targetTopRef.current = null;
@@ -66,14 +76,26 @@ export function FileUpload({
       const el = containerRef.current;
       if (!el) return;
       const currentTop = el.getBoundingClientRect().top;
-      window.scrollBy({ top: currentTop - targetTop, behavior: "instant" as ScrollBehavior });
+      const delta = currentTop - targetTop;
+      if (Math.abs(delta) < 0.5) return;
+      window.scrollBy({
+        top: delta,
+        behavior: "instant" as ScrollBehavior,
+      });
     };
-    // Two frames + a microtask: covers React's commit, the FSLI
-    // details re-render, and any sticky-element height recompute.
+    restore();
     requestAnimationFrame(() => {
       restore();
       requestAnimationFrame(restore);
     });
+    const t1 = setTimeout(restore, 50);
+    const t2 = setTimeout(restore, 200);
+    const t3 = setTimeout(restore, 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [isPending]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
