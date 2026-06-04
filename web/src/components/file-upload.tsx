@@ -42,6 +42,11 @@ export function FileUpload({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Bump after every successful upload to force-remount the FilePicker
+  // so its internal "selected filename" label resets back to blank.
+  // Resetting inputRef.current.value alone clears the underlying input
+  // but doesn't redraw the picker's display.
+  const [pickerKey, setPickerKey] = useState(0);
   // Scroll-position bookkeeping. Native router.refresh() preserves the
   // window scroll, but content can collapse around the user (the FSLI
   // <details> elements can re-mount on data change) and the browser
@@ -97,6 +102,7 @@ export function FileUpload({
         description: isParseable ? "Open Verify to review extracted data." : undefined,
       });
       if (inputRef.current) inputRef.current.value = "";
+      setPickerKey((k) => k + 1);
       router.refresh();
     });
   }
@@ -135,6 +141,7 @@ export function FileUpload({
       )}
       <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap gap-2">
         <FilePicker
+          key={pickerKey}
           ref={inputRef}
           accept={accept}
           className="max-w-md"
