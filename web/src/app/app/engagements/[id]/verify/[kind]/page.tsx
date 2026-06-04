@@ -51,7 +51,7 @@ export default async function VerifyPage({
   if (!file) {
     return (
       <main className="mx-auto w-full max-w-5xl px-6 py-12">
-        <BackLink id={id} />
+        <BackLink id={id} kind={kind} />
         <h1 className="font-display text-3xl font-medium text-primary">
           Verify — {KIND_LABELS[kind]}
         </h1>
@@ -70,7 +70,7 @@ export default async function VerifyPage({
 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
-      <BackLink id={id} />
+      <BackLink id={id} kind={kind} />
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -153,11 +153,16 @@ export default async function VerifyPage({
   );
 }
 
-function BackLink({ id }: { id: string }) {
+function BackLink({ id, kind }: { id: string; kind: ParseableKind }) {
+  // Land the user back on the section they came from — Source files
+  // (4) for CY TB verification, Support and Workpapers (6) for the
+  // AR aging + subsequent-cash uploads — instead of scrolling them to
+  // the top of the page.
+  const anchor = kind === "cy_tb" ? "section-4" : "section-6";
   return (
     <nav className="mb-6 text-sm">
       <Link
-        href={`/app/engagements/${id}`}
+        href={`/app/engagements/${id}#${anchor}`}
         className="text-foreground/60 hover:text-foreground hover:underline"
       >
         ← Engagement
