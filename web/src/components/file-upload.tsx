@@ -181,6 +181,7 @@ export function FileUpload({
       <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap gap-2">
         <FilePicker
           key={pickerKey}
+          forceReset={pickerKey}
           ref={inputRef}
           accept={accept}
           className="max-w-md"

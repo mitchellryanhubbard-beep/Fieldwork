@@ -15,11 +15,24 @@ export type FilePickerProps = Omit<
   "type" | "ref"
 > & {
   label?: string;
+  // Increment from the parent to force-clear the picker (both the
+  // input's selected file and the visible filename label). The key
+  // prop remount also covers this, but some parents see the ghost
+  // label survive the remount in production builds — having an
+  // explicit effect-based reset closes that gap.
+  forceReset?: number;
 };
 
 export const FilePicker = React.forwardRef<HTMLInputElement, FilePickerProps>(
   function FilePicker(
-    { className, label = "Choose File", onChange, multiple, ...props },
+    {
+      className,
+      label = "Choose File",
+      onChange,
+      multiple,
+      forceReset,
+      ...props
+    },
     forwardedRef,
   ) {
     const internalRef = React.useRef<HTMLInputElement | null>(null);
@@ -34,6 +47,14 @@ export const FilePicker = React.forwardRef<HTMLInputElement, FilePickerProps>(
     const [selectedLabel, setSelectedLabel] = React.useState<string | null>(
       null,
     );
+
+    // Whenever the parent bumps forceReset, clear both the underlying
+    // input's value and the visible filename label.
+    React.useEffect(() => {
+      if (forceReset == null || forceReset === 0) return;
+      if (internalRef.current) internalRef.current.value = "";
+      setSelectedLabel(null);
+    }, [forceReset]);
 
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
       const files = e.currentTarget.files;
