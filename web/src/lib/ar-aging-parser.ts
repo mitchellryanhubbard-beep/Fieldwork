@@ -110,12 +110,19 @@ function isSummaryRowLabel(text: string): boolean {
   if (!text) return false;
   const t = text.trim();
   if (!t) return false;
+  // Catches "Subtotal", "Sub-total", "Sub Total", "Sub-Totals", etc.
+  // anywhere in the line. Customer names containing literal "subtotal"
+  // are vanishingly rare; subtotal rows are common — so we err on
+  // skip-if-present.
+  if (/\bsub[-\s]?totals?\b/i.test(t)) return true;
   return (
-    // Totals / subtotals / net rollups
-    /^(grand\s+)?total\b/i.test(t) ||
-    /^subtotal\b/i.test(t) ||
+    // Totals / grand totals / net rollups — anchored to start so a
+    // real customer name like "Total Solutions LLC" isn't filtered.
+    /^(grand\s+)?totals?\b/i.test(t) ||
     /^net\s+(total|ar|receivables?)\b/i.test(t) ||
-    /\btotal\s+(ar|trade|receivables?|aged|due|outstanding|customers?|aging)\b/i.test(
+    // "Total AR / Total Trade / Total receivables" anywhere — these
+    // phrases never appear in a real customer name.
+    /\btotal\s+(ar|trade|receivables?|aged|due|outstanding|customers?|aging|gross|net|past[-\s]?due)\b/i.test(
       t,
     ) ||
     /^\bttl\b/i.test(t) ||
@@ -124,12 +131,18 @@ function isSummaryRowLabel(text: string): boolean {
       t,
     ) ||
     /^tie[-\s]?(out|to|in)\b|^tied?\s+(out|to)/i.test(t) ||
+    /\btie[-\s]?out\b|\bties?\s+to\b/i.test(t) ||
     /^per\s+(tb|trial\s+balance|gl|general\s+ledger|ledger|books)\b/i.test(t) ||
     /\bper\s+(tb|trial\s+balance|gl|general\s+ledger)\b/i.test(t) ||
     /^(variance|difference|diff)\b/i.test(t) ||
     /^(reconciliation|recon)\b/i.test(t) ||
     /^(adj(ustment)?|audit\s+adj)/i.test(t) ||
-    /^(book|ledger)\s+balance\b/i.test(t)
+    /^(book|ledger)\s+balance\b/i.test(t) ||
+    // Footer pagination / continuation labels
+    /^(continued|cont(\.|inued)?\s+from|carry\s*forward|c\/f|brought\s*forward|b\/f|\.{2,})/i.test(
+      t,
+    ) ||
+    /^(end\s+of|all\s+customers?|customer\s+count)/i.test(t)
   );
 }
 
