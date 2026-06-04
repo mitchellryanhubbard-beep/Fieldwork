@@ -157,7 +157,7 @@ export default async function EditEngagementPage({
                     engagementId={id}
                     kind="ar_aging"
                     title="AR Aging — by Customer + Invoice"
-                    description="Open AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data on upload."
+                    description="AR as of the balance-sheet date, broken down by invoice under each customer with standard aging buckets (Current, 1-30, 31-60, 61-90, 90+). Excel, CSV, or PDF — we'll extract the structured data, just make sure you verify the aging is parsed correctly after upload."
                     accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
                     current={detail.arAgingFile}
                     verification={verifications.ar_aging}
