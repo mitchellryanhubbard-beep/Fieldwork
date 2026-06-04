@@ -12,8 +12,8 @@ export function Hero() {
           First-pass audit fieldwork that lives in Excel.
         </h1>
         <p className="mt-4 max-w-2xl font-display text-lg text-accent sm:text-xl">
-          Generates new workpapers, rolls PY workpapers forward, and performs
-          substantive testing first-pass.
+          Our AI agent generates new workpapers, rolls forward prior-year
+          workpapers, and performs first-pass substantive testing.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
