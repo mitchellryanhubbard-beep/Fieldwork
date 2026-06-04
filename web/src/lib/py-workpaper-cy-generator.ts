@@ -133,19 +133,31 @@ export async function generateCyWorkpaperById(
   // Rewrite analytic-conclusion paragraphs to reference the table data
   // above them — so the prose stays in sync with the rolled-forward
   // numbers instead of carrying PY values verbatim.
-  const rewroteConclusions = rewriteConclusionsAsFormulas(wb, cyYear);
+  const rewroteConclusions = rewriteConclusionsAsFormulas(
+    wb,
+    cyYear,
+    dsoResult.handledSheets,
+  );
 
   // Post-pass: now that conclusion cells are formulas, swap any
   // remaining hardcoded year labels (FY22/FY23) for the rolled short-
   // form labels (FY23/FY24) and recompute the YoY% from the new PY/CY
   // values referenced by the formula. Preserves the auditor's narrative
   // and the numeric refs (D9/E9/F9).
-  const conclusionFormulaCount = updateConclusionFormulaRefs(wb, cyYear);
+  const conclusionFormulaCount = updateConclusionFormulaRefs(
+    wb,
+    cyYear,
+    dsoResult.handledSheets,
+  );
 
   // Rewrite the aging-conclusion paragraph in place — replace the
   // stale PY $/% literals and the wrongly-targeted `&Fnn&` refs with
   // the fresh PY/CY values from each bucket row.
-  const agingConclusionCount = updateAgingConclusionRefs(wb, cyYear);
+  const agingConclusionCount = updateAgingConclusionRefs(
+    wb,
+    cyYear,
+    dsoResult.handledSheets,
+  );
 
   // Lazy-load the assertion matrix only if this workpaper might need
   // a procedure box added (PY didn't author one). Matrix generation
@@ -237,9 +249,11 @@ export async function generateCyWorkpaperById(
 function rewriteConclusionsAsFormulas(
   wb: ExcelJS.Workbook,
   cyYear: number,
+  skipSheets?: Set<string>,
 ): number {
   let count = 0;
   for (const sheet of wb.worksheets) {
+    if (skipSheets?.has(sheet.name)) continue;
     for (let r = 1; r <= sheet.rowCount; r++) {
       for (let c = 1; c <= sheet.columnCount; c++) {
         const cell = sheet.getRow(r).getCell(c);
@@ -1293,9 +1307,11 @@ async function loadExistenceSampleForFsli(args: {
 function updateConclusionFormulaRefs(
   wb: ExcelJS.Workbook,
   cyYear: number,
+  skipSheets?: Set<string>,
 ): number {
   let count = 0;
   for (const sheet of wb.worksheets) {
+    if (skipSheets?.has(sheet.name)) continue;
     for (let r = 1; r <= sheet.rowCount; r++) {
       for (let c = 1; c <= sheet.columnCount; c++) {
         const cell = sheet.getRow(r).getCell(c);
@@ -1404,9 +1420,11 @@ function updateConclusionFormulaRefs(
 function updateAgingConclusionRefs(
   wb: ExcelJS.Workbook,
   cyYear: number,
+  skipSheets?: Set<string>,
 ): number {
   let count = 0;
   for (const sheet of wb.worksheets) {
+    if (skipSheets?.has(sheet.name)) continue;
     const layout = findAgingTableLayout(sheet, cyYear);
     if (!layout) continue;
     const pyTotal = readNumberValue(

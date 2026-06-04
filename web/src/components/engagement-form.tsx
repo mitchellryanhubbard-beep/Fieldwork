@@ -54,7 +54,6 @@ export type EngagementFormProps = {
 const EMPTY_DEFAULTS: EngagementFormValues = {
   clientName: "",
   fiscalYearEnd: "",
-  reportingPeriodStart: "",
   framework: "AICPA",
   industry: "Manufacturing",
   planningQuestionnaire: emptyQuestionnaireAnswers(),
@@ -122,12 +121,6 @@ export function EngagementForm({
             error={form.formState.errors.fiscalYearEnd?.message}
           >
             <Input type="date" {...form.register("fiscalYearEnd")} />
-          </Field>
-          <Field
-            label="Reporting period start (optional)"
-            error={form.formState.errors.reportingPeriodStart?.message}
-          >
-            <Input type="date" {...form.register("reportingPeriodStart")} />
           </Field>
           <Field
             label="Audit framework"

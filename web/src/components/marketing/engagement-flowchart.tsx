@@ -30,7 +30,7 @@ const STEPS: Step[] = [
   {
     n: "04",
     title: "Source Files",
-    body: "Upload prior-year signed audit opinion (PDF) and current-year trial balance (Excel, CSV, or PDF).",
+    body: "Upload prior-year signed audited financials (PDF) and current-year trial balance (Excel, CSV, or PDF).",
   },
   {
     n: "05",
@@ -58,7 +58,7 @@ export function EngagementFlowchart() {
           setup to substantive testing.
         </p>
 
-        <div className="mt-12 space-y-12">
+        <div className="mt-12 space-y-6">
           {STEPS.map((s, i) => (
             <div key={s.n} className="group relative">
               <FlowCard {...s} />
@@ -99,10 +99,9 @@ function FlowCard({ n, title, body }: Step) {
 
 // SideArrow — hover-triggered curved arrow that arcs out from the side
 // of the current card and comes back in pointing down at the next
-// card. Mirrors the StepArrow pattern in HowItWorks: opacity 0 by
-// default, reveals on group-hover of the surrounding step container.
-// Sides alternate down the flow (even indices left, odd indices right)
-// so the eye weaves zig-zag from card to card.
+// card. Opacity 0 by default, reveals on group-hover of the surrounding
+// step container. Sides alternate down the flow (even indices left,
+// odd indices right) so the eye weaves zig-zag from card to card.
 function SideArrow({
   side,
   index: _index,
@@ -115,22 +114,14 @@ function SideArrow({
       ? { left: "calc(100% + 6px)" }
       : { right: "calc(100% + 6px)" };
   const isRight = side === "right";
-  // Body is a Q curve bulging out to one side. The endpoint tangent
-  // direction is (end - control) — for the right arrow that's
-  // (-56, 26) (down-left); for the left arrow it's (56, 26) (down-
-  // right). The arrowhead is drawn with the tip at the local origin
-  // and the back along +x, then translated to the body endpoint and
-  // rotated by the angle of the BACK direction (= reverse of tangent)
-  // so the head opens away from where the curve came from.
   const bodyPath = isRight ? "M 4 0 Q 60 26 4 52" : "M 66 0 Q 10 26 66 52";
   const tipX = isRight ? 4 : 66;
   const tipY = 52;
-  // atan2(-26, 56) ≈ -24.9°  /  atan2(-26, -56) ≈ -155.1°
   const headRotationDeg = isRight ? -24.9 : -155.1;
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute z-10 hidden lg:block"
+      className="pointer-events-none absolute z-20 hidden sm:block"
       style={{
         ...positionStyle,
         top: "calc(100% - 4px)",
@@ -151,9 +142,6 @@ function SideArrow({
           strokeLinejoin="round"
         >
           <path d={bodyPath} />
-          {/* Chevron tip at origin, wings opening to +x. Transform
-              positions it at the body endpoint and rotates it to align
-              with the curve's tangent. */}
           <path
             d="M 11 -5 L 0 0 L 11 5"
             transform={`translate(${tipX} ${tipY}) rotate(${headRotationDeg})`}
@@ -171,7 +159,7 @@ function CardFireworks() {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-10 hidden lg:block"
+      className="pointer-events-none absolute inset-0 z-20 hidden sm:block"
     >
       <Burst className="absolute -top-5 -left-3 size-10" delay={0} />
       <Burst className="absolute -top-7 -right-3 size-12" delay={120} />

@@ -14,9 +14,9 @@ type Slice = {
 // (navy + slate) and two warm (gold + tan) so adjacent slices contrast.
 const SLICES: Slice[] = [
   { label: "Sample selection + tickmarks", value: 40, color: "#1d3a52" },
-  { label: "Analytical procedures", value: 25, color: "#3d5e7c" },
+  { label: "Detail Testing", value: 25, color: "#3d5e7c" },
   { label: "Workpaper formatting", value: 20, color: "#c8a04a" },
-  { label: "Exception consolidation", value: 15, color: "#d4b176" },
+  { label: "Analytical Procedures", value: 15, color: "#d4b176" },
 ];
 
 const SIZE = 240;
