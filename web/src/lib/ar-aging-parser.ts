@@ -111,16 +111,25 @@ function isSummaryRowLabel(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
   return (
+    // Totals / subtotals / net rollups
     /^(grand\s+)?total\b/i.test(t) ||
     /^subtotal\b/i.test(t) ||
     /^net\s+(total|ar|receivables?)\b/i.test(t) ||
     /\btotal\s+(ar|trade|receivables?|aged|due|outstanding|customers?|aging)\b/i.test(
       t,
     ) ||
+    /^\bttl\b/i.test(t) ||
+    // Footer / cross-check / tie-out / reconciliation rows
     /^(cross[-\s]check|%\s+of|aging\s+(total|summary)|breakdown|summary|footnote|tickmark)/i.test(
       t,
     ) ||
-    /^\bttl\b/i.test(t)
+    /^tie[-\s]?(out|to|in)\b|^tied?\s+(out|to)/i.test(t) ||
+    /^per\s+(tb|trial\s+balance|gl|general\s+ledger|ledger|books)\b/i.test(t) ||
+    /\bper\s+(tb|trial\s+balance|gl|general\s+ledger)\b/i.test(t) ||
+    /^(variance|difference|diff)\b/i.test(t) ||
+    /^(reconciliation|recon)\b/i.test(t) ||
+    /^(adj(ustment)?|audit\s+adj)/i.test(t) ||
+    /^(book|ledger)\s+balance\b/i.test(t)
   );
 }
 
