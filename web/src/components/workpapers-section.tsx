@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { GenerateAccountWorkpaperButton } from "@/components/generate-account-workpaper-button";
-import { GenerateConfirmationsButton } from "@/components/generate-confirmations-button";
 import { GenerateCyWorkpaperButton } from "@/components/generate-cy-workpaper-button";
 import { PyUploadForm } from "@/components/py-upload-form";
 import { PyUntaggedBanner } from "@/components/py-untagged-banner";
@@ -208,7 +207,7 @@ export function WorkpapersSection({
                   ) : null}
                 </ul>
 
-                {!fromScratchExists || !confirmationsExist ? (
+                {!fromScratchExists ? (
                   <div className="flex flex-wrap items-center gap-2 border-t border-primary/10 pt-3">
                     <GenerateAccountWorkpaperButton
                       engagementId={engagementId}
@@ -216,20 +215,6 @@ export function WorkpapersSection({
                       accountName={a.name}
                       alreadyGenerated={fromScratchExists}
                       generationBlockedReason={workpaperBlockedReason}
-                    />
-                    <GenerateConfirmationsButton
-                      engagementId={engagementId}
-                      acctNum={a.acctNum}
-                      accountName={a.name}
-                      alreadyGenerated={confirmationsExist}
-                      disabledReason={
-                        confirmationsBlockedReason ??
-                        (!hasArAging
-                          ? "Upload an AR Aging first (Supporting Schedules)."
-                          : !fromScratchExists
-                            ? "Generate the workpaper first so the sample is locked."
-                            : undefined)
-                      }
                     />
                   </div>
                 ) : null}
