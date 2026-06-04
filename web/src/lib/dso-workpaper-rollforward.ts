@@ -324,18 +324,34 @@ function computeTbValues(tb: TrialBalance): {
   netAr: number;
 } {
   let revenue = 0;
-  let grossAr = 0;
   let allowance = 0;
+  // DSO workpapers test Trade AR specifically. Bucket the AR-family
+  // accounts as we go and prefer the explicitly-Trade ones; fall back
+  // to whatever other AR exists only when no Trade/control account is
+  // present (engagements that have a single "Accounts Receivable"
+  // line).
+  const tradeAccounts: typeof tb.accounts = [];
+  const otherArAccounts: typeof tb.accounts = [];
   for (const a of tb.accounts) {
     if (a.section === "Revenue") revenue += a.cyBalance;
     if (/allowance(\s+for)?\s+doubtful/i.test(a.name)) {
       allowance += a.cyBalance;
-    } else if (
-      /accounts?\s+receivable|trade\s+receivables?|^a\/r$|^ar$/i.test(a.name)
+      continue;
+    }
+    if (
+      !/accounts?\s+receivable|trade\s+receivables?|^a\/r$|^ar$/i.test(a.name)
     ) {
-      grossAr += a.cyBalance;
+      continue;
+    }
+    if (/\btrade\b|\bcontrol\b/i.test(a.name)) {
+      tradeAccounts.push(a);
+    } else {
+      otherArAccounts.push(a);
     }
   }
+  const arSource =
+    tradeAccounts.length > 0 ? tradeAccounts : otherArAccounts;
+  const grossAr = arSource.reduce((s, a) => s + a.cyBalance, 0);
   if (revenue < 0) revenue = -revenue;
   const netAr = grossAr + allowance;
   return { revenue, grossAr, allowance, netAr };
