@@ -200,7 +200,16 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
   const map = mapAgingColumns(sheet, headerRow);
   if (map.customer == null || map.total == null) return [];
 
+  // If the schedule carries an Invoice # column, each row is a real
+  // invoice and we treat them as such — rollUpToCustomers will then
+  // aggregate same-name customers down to one ArCustomer.
+  const invoiceCol = findInvoiceNumberColumn(sheet, headerRow);
+
   const invoices: ArInvoice[] = [];
+  // Assign a stable custNum per UNIQUE customer name across all rows
+  // (case-insensitive, trimmed) so multiple invoice rows for the same
+  // customer share a custNum and the rollup collapses them correctly.
+  const custNumByName = new Map<string, string>();
   let custCounter = 1;
   for (let r = headerRow + 1; r <= sheet.rowCount; r++) {
     const custName = readCellText(sheet, r, map.customer).trim();
@@ -210,8 +219,13 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
     const total = readCellNumber(sheet, r, map.total);
     if (total === 0) continue;
 
-    const custNum = `C${String(custCounter).padStart(3, "0")}`;
-    custCounter += 1;
+    const key = custName.toLowerCase();
+    let custNum = custNumByName.get(key);
+    if (!custNum) {
+      custNum = `C${String(custCounter).padStart(3, "0")}`;
+      custCounter += 1;
+      custNumByName.set(key, custNum);
+    }
 
     const d91_120 =
       map.d90_plus != null ? readCellNumber(sheet, r, map.d90_plus) : 0;
@@ -219,10 +233,14 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
       map.d120_plus != null ? readCellNumber(sheet, r, map.d120_plus) : 0;
     const d90_plus = d91_120 + d120_plus;
 
+    const invoiceNum =
+      invoiceCol != null
+        ? readCellText(sheet, r, invoiceCol).trim() || `${custNum}-${r}`
+        : `${custNum}-AGG`;
     invoices.push({
       custNum,
       custName,
-      invoiceNum: `${custNum}-AGG`,
+      invoiceNum,
       invoiceDate: null,
       dueDate: null,
       terms: "",
@@ -252,6 +270,28 @@ type CustomerAgingColumns = {
   d90_plus?: number;
   d120_plus?: number;
 };
+
+// Scans the header row for an Invoice # column so the customer-level
+// fallback can preserve invoice identity when the schedule is really
+// an invoice-detail file dressed up with customer-style headers.
+function findInvoiceNumberColumn(
+  sheet: ExcelJS.Worksheet,
+  headerRow: number,
+): number | null {
+  const maxCol = Math.min(20, sheet.columnCount);
+  for (let c = 1; c <= maxCol; c++) {
+    const h = readCellText(sheet, headerRow, c).trim().toLowerCase();
+    if (!h) continue;
+    if (
+      /^invoice(\s*#|\s+(num|number|no\.?))?\s*$/.test(h) ||
+      /^inv\s*(#|num|no\.?|number)\s*$/.test(h) ||
+      /^doc(ument)?\s*(#|no\.?|num|number)\s*$/.test(h)
+    ) {
+      return c;
+    }
+  }
+  return null;
+}
 
 function findCustomerAgingHeaderRow(
   sheet: ExcelJS.Worksheet,
