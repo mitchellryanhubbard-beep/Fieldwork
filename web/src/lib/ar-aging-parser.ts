@@ -102,15 +102,39 @@ export async function parseArAging(
   return { asOfDate, customers, invoices, total };
 }
 
+// Returns true when the text reads like a footer/subtotal/total/summary
+// row rather than a real customer or invoice. Both parsers run every
+// row through this so the returned invoice + customer lists are
+// guaranteed pure data — no sums, no cross-checks, no "% of" rows.
+function isSummaryRowLabel(text: string): boolean {
+  if (!text) return false;
+  const t = text.trim();
+  if (!t) return false;
+  return (
+    /^(grand\s+)?total\b/i.test(t) ||
+    /^subtotal\b/i.test(t) ||
+    /^net\s+(total|ar|receivables?)\b/i.test(t) ||
+    /\btotal\s+(ar|trade|receivables?|aged|due|outstanding|customers?|aging)\b/i.test(
+      t,
+    ) ||
+    /^(cross[-\s]check|%\s+of|aging\s+(total|summary)|breakdown|summary|footnote|tickmark)/i.test(
+      t,
+    ) ||
+    /^\bttl\b/i.test(t)
+  );
+}
+
 // Hartwell layout: invoice rows have customer code in col 1, invoice # in
 // col 3, and aging buckets in fixed columns 8-13.
 function parseInvoiceLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
   const invoices: ArInvoice[] = [];
   for (let r = 8; r <= sheet.rowCount; r++) {
     const c1 = readCellText(sheet, r, 1).trim();
+    const c2 = readCellText(sheet, r, 2).trim();
     const c3 = readCellText(sheet, r, 3).trim();
     if (!c1) continue;
-    if (/^subtotal\b/i.test(c1)) continue;
+    if (isSummaryRowLabel(c1) || isSummaryRowLabel(c2) || isSummaryRowLabel(c3))
+      continue;
     if (!c3) continue;
     if (!/^[A-Z]\d{2,5}$/.test(c1)) continue;
 
@@ -159,8 +183,7 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
   for (let r = headerRow + 1; r <= sheet.rowCount; r++) {
     const custName = readCellText(sheet, r, map.customer).trim();
     if (!custName) continue;
-    if (/^(grand\s+)?total\b/i.test(custName)) continue;
-    if (/^subtotal\b/i.test(custName)) continue;
+    if (isSummaryRowLabel(custName)) continue;
 
     const total = readCellNumber(sheet, r, map.total);
     if (total === 0) continue;
