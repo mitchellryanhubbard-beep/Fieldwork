@@ -117,7 +117,7 @@ export default async function EditEngagementPage({
               engagementId={id}
               kind="cy_tb"
               title="CY Trial Balance (Excel, CSV, or PDF)"
-              description="Current-year trial balance as exported from the client's GL. We'll extract the structured data on upload."
+              description="Current-year trial balance as exported from the client's GL. We'll extract the structured data on upload, you verify the parsing looks good."
               accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
               current={detail.cyTrialBalanceFile}
               verification={verifications.cy_tb}
