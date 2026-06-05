@@ -14,7 +14,7 @@ export function NumberedSection({
   children,
 }: NumberedSectionProps) {
   return (
-    <section id={`section-${n}`} className="scroll-mt-6 space-y-3">
+    <section id={`section-${n}`} className="scroll-mt-20 space-y-3">
       <header className="flex items-center gap-3">
         <span className="grid size-7 place-items-center rounded-full bg-accent font-mono text-xs font-semibold text-primary">
           {String(n).padStart(2, "0")}
