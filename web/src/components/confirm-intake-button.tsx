@@ -31,7 +31,11 @@ export function ConfirmIntakeButton({
       toast.success("Confirmed — parsed data is now live", {
         description: "Downstream tests will use this canonical data.",
       });
-      router.refresh();
+      // Land the user back on the section they came from — Source
+      // files (4) for CY TB, Support and Workpapers (6) for the FSLI
+      // supporting schedules (ar_aging + subsequent_cash_receipts).
+      const anchor = kind === "cy_tb" ? "section-4" : "section-6";
+      router.push(`/app/engagements/${engagementId}#${anchor}`);
     });
   }
 
