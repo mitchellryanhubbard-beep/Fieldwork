@@ -259,10 +259,9 @@ function FsliChild({
     return (
       <Link
         href={href}
-        className="flex items-center justify-between rounded border border-primary/10 bg-background px-3 py-2 text-sm text-primary hover:bg-secondary/40"
+        className="block rounded border border-primary/10 bg-background px-3 py-2 text-sm text-primary hover:bg-secondary/40"
       >
-        <span>{label}</span>
-        <span className="text-xs text-primary/40">→</span>
+        {label}
       </Link>
     );
   }
