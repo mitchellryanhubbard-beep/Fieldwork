@@ -548,7 +548,7 @@ function buildSampleSheet(
       sel.custNum,
       sel.custName,
       sel.balance,
-      sel.reason === "top-tier" ? "Auto-included (top-tier)" : "Random",
+      selectionReasonLabel(sel.reason),
       "",
     ]);
     row.getCell(4).numFmt = USD_FMT;
@@ -557,7 +557,8 @@ function buildSampleSheet(
     if (
       sel.reason === "top-tier" ||
       sel.reason === "risk-table-top" ||
-      sel.reason === "mus-auto"
+      sel.reason === "mus-auto" ||
+      sel.reason === "aged-past-due"
     ) {
       row.getCell(5).font = { bold: true };
     }
@@ -578,6 +579,8 @@ function selectionReasonLabel(reason: SelectionReason): string {
       return "Auto-included (≥ sampling interval)";
     case "mus-hit":
       return "MUS systematic hit";
+    case "aged-past-due":
+      return "Auto-included (past-due > 60 days)";
   }
 }
 

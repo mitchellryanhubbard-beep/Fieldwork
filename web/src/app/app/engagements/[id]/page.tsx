@@ -5,7 +5,6 @@ import { FileUpload } from "@/components/file-upload";
 import { GenerateBinderButton } from "@/components/generate-binder-button";
 import { GenerateMatrixButton } from "@/components/generate-matrix-button";
 import { NumberedSection } from "@/components/numbered-section";
-import { buttonVariants } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { loadVerification, type VerificationRecord } from "@/lib/intake/storage";
 import {
@@ -176,22 +175,8 @@ export default async function EditEngagementPage({
                 </div>
               ),
             }}
-            workpapersByFsli={{
-              "accounts-receivable": (
-                <div className="space-y-3">
-                  <p className="text-xs text-foreground/60">
-                    PY files can be uploaded and rolled forward into the CY
-                    pane or you can generate a new workpaper utilizing the
-                    link at the bottom.
-                  </p>
-                  <Link
-                    href={`/app/engagements/${id}/workpapers`}
-                    className={`${buttonVariants({ variant: "gold", size: "sm" })} w-fit`}
-                  >
-                    Open AR workpapers →
-                  </Link>
-                </div>
-              ),
+            workpapersHrefByFsli={{
+              "accounts-receivable": `/app/engagements/${id}/workpapers`,
             }}
           />
         </NumberedSection>
@@ -216,13 +201,13 @@ const FSLIS = [
 type FsliBreakdownProps = {
   engagementId: string;
   schedulesByFsli?: Record<string, React.ReactNode>;
-  workpapersByFsli?: Record<string, React.ReactNode>;
+  workpapersHrefByFsli?: Record<string, string>;
 };
 
 function FsliBreakdown({
   engagementId: _engagementId,
   schedulesByFsli = {},
-  workpapersByFsli = {},
+  workpapersHrefByFsli = {},
 }: FsliBreakdownProps) {
   return (
     <div className="rounded-xl border border-primary/10 bg-card p-5">
@@ -243,7 +228,7 @@ function FsliBreakdown({
                 />
                 <FsliChild
                   label="Workpapers"
-                  content={workpapersByFsli[f.slug]}
+                  href={workpapersHrefByFsli[f.slug]}
                 />
               </div>
             </details>
@@ -261,10 +246,26 @@ function FsliBreakdown({
 function FsliChild({
   label,
   content,
+  href,
 }: {
   label: string;
   content?: React.ReactNode;
+  // When supplied, the label itself becomes a clickable row that
+  // navigates to href — no nested accordion. Use this for child views
+  // (e.g. Workpapers) that live on their own page.
+  href?: string;
 }) {
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="flex items-center justify-between rounded border border-primary/10 bg-background px-3 py-2 text-sm text-primary hover:bg-secondary/40"
+      >
+        <span>{label}</span>
+        <span className="text-xs text-primary/40">→</span>
+      </Link>
+    );
+  }
   if (!content) {
     return (
       <Link

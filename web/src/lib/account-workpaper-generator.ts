@@ -123,7 +123,8 @@ export async function generateAccountWorkpaperById(
       aging &&
       (methodology === "highCoverageHybrid" ||
         methodology === "riskBasedTable" ||
-        methodology === "musStatistical")
+        methodology === "musStatistical" ||
+        methodology === "agedReviewTargeted")
     ) {
       const result = runSampling({
         methodology,

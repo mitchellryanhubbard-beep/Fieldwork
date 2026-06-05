@@ -55,8 +55,8 @@ export const METHODOLOGIES: Record<MethodologyId, MethodologyMeta> = {
     id: "agedReviewTargeted",
     label: "Aged review + targeted past-due",
     description:
-      "Review the full aging; sample past-due balances (e.g. > 60 days) for collectibility evaluation.",
-    enabled: false,
+      "Review the full aging; sample past-due balances (> 60 days) for collectibility evaluation.",
+    enabled: true,
   },
   manual: {
     id: "manual",
@@ -124,7 +124,8 @@ export type SelectionReason =
   | "risk-table-top"     // risk-based table: largest balances
   | "risk-table-random"  // risk-based table: random remainder
   | "mus-auto"           // MUS: balance ≥ sampling interval (always selected)
-  | "mus-hit";           // MUS: at least one systematic hit landed inside this customer
+  | "mus-hit"            // MUS: at least one systematic hit landed inside this customer
+  | "aged-past-due";     // aged review: customer carries balances aged > threshold days
 
 export type Selection = {
   custNum: string;
@@ -158,6 +159,17 @@ export const MUS_DEFAULTS = {
   confidenceFactor: 3.0,
 } as const;
 
+export type AgedReviewParams = {
+  // Customers carrying any dollars aged STRICTLY MORE than this many
+  // days are auto-selected. 60 picks up both 61-90 and 90+ buckets,
+  // which is where collectibility risk typically concentrates.
+  pastDueThresholdDays: 60;
+};
+
+export const AGED_REVIEW_DEFAULTS: AgedReviewParams = {
+  pastDueThresholdDays: 60,
+};
+
 // Common fields across every methodology's result. Per-methodology details
 // live on the discriminated union below.
 type SampleResultBase = {
@@ -174,6 +186,7 @@ export type SampleResult = SampleResultBase &
     | { methodology: "highCoverageHybrid"; params: HighCoverageParams }
     | { methodology: "riskBasedTable"; params: RiskBasedTableParams }
     | { methodology: "musStatistical"; params: MusParams }
+    | { methodology: "agedReviewTargeted"; params: AgedReviewParams }
   );
 
 // Deterministic seeded RNG (mulberry32). Same seed string → same shuffle.
@@ -468,6 +481,55 @@ export function runMonetaryUnitSampling(args: {
 // Top-level dispatcher — call this from the workpaper generator. Returns
 // null when the methodology doesn't produce an automated sample
 // (manual, period-window, etc.) or required inputs are missing.
+// ---------------------------------------------------------------------------
+// Aged review + targeted past-due — Valuation
+// ---------------------------------------------------------------------------
+//
+// Valuation is fundamentally a recoverability question against the full AR
+// book. Population = every customer balance. Selection = every customer
+// carrying $ aged > pastDueThresholdDays — those are where the
+// collectibility risk lives (subsequent-cash + allowance adequacy work
+// targets them). Deterministic: order by aged-$ desc, no random draw.
+//
+export function runAgedReviewTargeted(args: {
+  customers: ArCustomer[];
+  seed: string;
+  params?: Partial<AgedReviewParams>;
+}): SampleResult {
+  const params: AgedReviewParams = { ...AGED_REVIEW_DEFAULTS, ...args.params };
+  const populationTotal = args.customers.reduce(
+    (s, c) => s + Math.abs(c.total),
+    0,
+  );
+  const pastDueOf = (c: ArCustomer) =>
+    (c.d61_90 ?? 0) + (c.d90_plus ?? 0);
+  const pastDue = args.customers
+    .filter((c) => pastDueOf(c) > 0)
+    .sort((a, b) => pastDueOf(b) - pastDueOf(a));
+
+  const selections: Selection[] = pastDue.map((c) => ({
+    custNum: c.custNum,
+    custName: c.custName,
+    balance: c.total,
+    reason: "aged-past-due" as const,
+  }));
+  const coverageDollar = selections.reduce(
+    (s, sel) => s + Math.abs(sel.balance),
+    0,
+  );
+  return {
+    methodology: "agedReviewTargeted",
+    params,
+    seed: args.seed,
+    populationTotal,
+    populationCount: args.customers.length,
+    selections,
+    coverageDollar,
+    coveragePct:
+      populationTotal === 0 ? 0 : coverageDollar / populationTotal,
+  };
+}
+
 export function runSampling(args: {
   methodology: MethodologyId;
   aging: ArAging;
@@ -513,6 +575,11 @@ export function runSampling(args: {
           args.musOverrides?.tolerableMisstatement ??
           args.performanceMateriality,
         confidenceFactor: args.musOverrides?.confidenceFactor,
+        seed,
+      });
+    case "agedReviewTargeted":
+      return runAgedReviewTargeted({
+        customers: args.aging.customers,
         seed,
       });
     default:
