@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EngagementBackLink } from "@/components/engagement-back-link";
 import { notFound } from "next/navigation";
 import { WorkpapersSection } from "@/components/workpapers-section";
 import { Chip } from "@/components/ui/chip";
@@ -79,12 +80,10 @@ export default async function EngagementWorkpapersPage({
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <nav className="mb-6 text-sm">
-        <Link
-          href={`/app/engagements/${id}#section-6`}
-          className="text-foreground/60 hover:text-foreground hover:underline"
-        >
-          ← {v.clientName || "Engagement"}
-        </Link>
+        <EngagementBackLink
+          fallbackHref={`/app/engagements/${id}#section-6`}
+          label={v.clientName || "Engagement"}
+        />
       </nav>
 
       <header className="mb-10">
