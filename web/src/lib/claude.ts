@@ -23,7 +23,12 @@ export function getClaudeClient(): Anthropic {
     );
   }
 
-  cached = new Anthropic({ apiKey });
+  // Retry generously. The SDK default is 2; we bump to 6 because
+  // Anthropic's 529 "overloaded" responses are bursty during high-
+  // traffic windows and a single failure on a long workpaper-gen
+  // call wastes minutes. Backoff is exponential with jitter by
+  // default (~0.5s → 1s → 2s → 4s → 8s → 16s ≈ 30s total cap).
+  cached = new Anthropic({ apiKey, maxRetries: 6 });
   return cached;
 }
 

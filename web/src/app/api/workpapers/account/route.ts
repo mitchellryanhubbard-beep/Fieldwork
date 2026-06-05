@@ -60,7 +60,12 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Anthropic "overloaded" reads like a raw JSON blob in the UI
+    // otherwise. Translate to a short, user-actionable line.
+    const userMessage = /overloaded_error|"status":\s*529|\b529\b/.test(message)
+      ? "Anthropic is temporarily overloaded. Wait a minute and try again — the previous request has already been retried up to 6 times."
+      : message;
+    return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }
 
