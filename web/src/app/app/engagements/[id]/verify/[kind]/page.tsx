@@ -29,6 +29,7 @@ type Params = { id: string; kind: string };
 
 const KIND_TO_FILE_FIELD: Record<ParseableKind, string> = {
   ar_aging: "arAgingFile",
+  py_ar_aging: "pyArAgingFile",
   cy_tb: "cyTrialBalanceFile",
   subsequent_cash_receipts: "subsequentCashReceiptsFile",
 };
@@ -227,7 +228,8 @@ function ParsedPreview({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   canonical: any;
 }) {
-  if (kind === "ar_aging") return <ArAgingPreview aging={canonical} />;
+  if (kind === "ar_aging" || kind === "py_ar_aging")
+    return <ArAgingPreview aging={canonical} />;
   if (kind === "cy_tb") return <TbPreview tb={canonical} />;
   if (kind === "subsequent_cash_receipts") return <ScrPreview scr={canonical} />;
   return (

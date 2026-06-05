@@ -15,10 +15,15 @@ import type { SubsequentCashReceipts } from "@/lib/scr-parser";
 // File-kind keys mirror the engagement_file_kind_enum values that already
 // power uploads. py_audit has no canonical shape — we store it as evidence
 // but don't parse it yet (it's the PCAOB-signed opinion PDF).
-export type ParseableKind = "ar_aging" | "cy_tb" | "subsequent_cash_receipts";
+export type ParseableKind =
+  | "ar_aging"
+  | "py_ar_aging"
+  | "cy_tb"
+  | "subsequent_cash_receipts";
 
 export type CanonicalByKind = {
   ar_aging: ArAging;
+  py_ar_aging: ArAging;
   cy_tb: TrialBalance;
   subsequent_cash_receipts: SubsequentCashReceipts;
 };
@@ -27,13 +32,15 @@ export type Canonical<K extends ParseableKind> = CanonicalByKind[K];
 
 export const PARSEABLE_KINDS: ParseableKind[] = [
   "ar_aging",
+  "py_ar_aging",
   "cy_tb",
   "subsequent_cash_receipts",
 ];
 
 // Human-facing labels — surfaced in the verification UI title bar.
 export const KIND_LABELS: Record<ParseableKind, string> = {
-  ar_aging: "AR Aging",
+  ar_aging: "CY AR Aging",
+  py_ar_aging: "PY AR Aging",
   cy_tb: "CY Trial Balance",
   subsequent_cash_receipts: "Subsequent Cash Receipts",
 };

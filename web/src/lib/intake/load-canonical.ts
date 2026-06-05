@@ -38,6 +38,14 @@ export async function loadArAgingForEngagement(
   return loadLegacyXlsx<ArAging>(engagementId, "ar_aging", parseArAging);
 }
 
+export async function loadPyArAgingForEngagement(
+  engagementId: string,
+): Promise<ArAging | null> {
+  const canonical = await loadParsedCanonical(engagementId, "py_ar_aging");
+  if (canonical) return canonical;
+  return loadLegacyXlsx<ArAging>(engagementId, "py_ar_aging", parseArAging);
+}
+
 export async function loadSubsequentCashReceiptsForEngagement(
   engagementId: string,
 ): Promise<SubsequentCashReceipts | null> {
@@ -111,7 +119,7 @@ export async function requireUploadsConfirmed(
 
 async function loadLegacyXlsx<T>(
   engagementId: string,
-  kind: "cy_tb" | "ar_aging" | "subsequent_cash_receipts",
+  kind: "cy_tb" | "ar_aging" | "py_ar_aging" | "subsequent_cash_receipts",
   parse: (buffer: Buffer) => Promise<T>,
 ): Promise<T | null> {
   const sb = getServerSupabase();

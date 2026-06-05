@@ -105,6 +105,7 @@ async function parseCsv<K extends ParseableKind>(
 ): Promise<Canonical<K>> {
   switch (kind) {
     case "ar_aging":
+    case "py_ar_aging":
       return (await parseArAgingCsv(bytes)) as Canonical<K>;
     case "cy_tb":
       return (await parseTrialBalanceCsv(bytes)) as Canonical<K>;
@@ -123,6 +124,7 @@ async function parsePdf<K extends ParseableKind>(
 ): Promise<Canonical<K>> {
   switch (kind) {
     case "ar_aging":
+    case "py_ar_aging":
       return (await parseArAgingPdf(bytes)) as Canonical<K>;
     case "cy_tb":
       return (await parseTrialBalancePdf(bytes)) as Canonical<K>;
@@ -141,6 +143,7 @@ async function parseXlsx<K extends ParseableKind>(
 ): Promise<Canonical<K>> {
   switch (kind) {
     case "ar_aging":
+    case "py_ar_aging":
       return (await parseArAging(bytes)) as Canonical<K>;
     case "cy_tb":
       return (await parseTrialBalance(bytes)) as Canonical<K>;

@@ -108,6 +108,7 @@ export async function uploadFileAction(
     "py_audit",
     "cy_tb",
     "ar_aging",
+    "py_ar_aging",
     "subsequent_cash_receipts",
   ] as const;
   type AllowedKind = (typeof allowedKinds)[number];
@@ -174,6 +175,7 @@ export async function saveManualArAgingAction(
   asOfDate: string | null,
   invoices: unknown[],
   originalFilename: string,
+  kind: "ar_aging" | "py_ar_aging" = "ar_aging",
 ): Promise<ActionResult> {
   if (!engagementId) return { ok: false, error: "engagementId is required" };
 
@@ -225,8 +227,8 @@ export async function saveManualArAgingAction(
   };
 
   try {
-    await saveParsedCanonical(engagementId, "ar_aging", canonical);
-    const existing = await loadVerification(engagementId, "ar_aging");
+    await saveParsedCanonical(engagementId, kind, canonical);
+    const existing = await loadVerification(engagementId, kind);
     const record: VerificationRecord = {
       status: "confirmed",
       sourceFormat: "manual",
@@ -237,9 +239,9 @@ export async function saveManualArAgingAction(
       confirmedAt: new Date().toISOString(),
       failureMessage: null,
     };
-    await saveVerification(engagementId, "ar_aging", record);
+    await saveVerification(engagementId, kind, record);
     revalidatePath(`/app/engagements/${engagementId}`);
-    revalidatePath(`/app/engagements/${engagementId}/verify/ar_aging`);
+    revalidatePath(`/app/engagements/${engagementId}/verify/${kind}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: errorMessage(err) };

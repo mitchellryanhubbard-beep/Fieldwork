@@ -53,6 +53,7 @@ export type ManualArAgingGridProps = {
   initialInvoices: Draft[];
   initialAsOfDate: string;
   originalFilename: string;
+  kind?: "ar_aging" | "py_ar_aging";
 };
 
 export function ManualArAgingGrid({
@@ -60,6 +61,7 @@ export function ManualArAgingGrid({
   initialInvoices,
   initialAsOfDate,
   originalFilename,
+  kind = "ar_aging",
 }: ManualArAgingGridProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -91,6 +93,7 @@ export function ManualArAgingGrid({
         asOfDate || null,
         rows,
         originalFilename,
+        kind,
       );
       if (!result.ok) {
         toast.error("Couldn't save manual mapping", { description: result.error });
@@ -99,7 +102,7 @@ export function ManualArAgingGrid({
       toast.success("AR Aging saved — verification confirmed", {
         description: "Downstream tests will use this canonical data.",
       });
-      router.push(`/app/engagements/${engagementId}/verify/ar_aging`);
+      router.push(`/app/engagements/${engagementId}/verify/${kind}`);
       router.refresh();
     });
   }

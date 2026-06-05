@@ -53,7 +53,7 @@ export default async function ManualMappingPage({
         </p>
       </header>
 
-      {kind === "ar_aging" ? (
+      {kind === "ar_aging" || kind === "py_ar_aging" ? (
         <ManualArAgingPane engagementId={id} kind={kind} />
       ) : kind === "cy_tb" ? (
         <ManualTbPane engagementId={id} />
@@ -68,13 +68,14 @@ export default async function ManualMappingPage({
 
 async function ManualArAgingPane({
   engagementId,
+  kind,
 }: {
   engagementId: string;
-  kind: ParseableKind;
+  kind: "ar_aging" | "py_ar_aging";
 }) {
   const [canonical, verification] = await Promise.all([
-    loadParsedCanonical(engagementId, "ar_aging"),
-    loadVerification(engagementId, "ar_aging"),
+    loadParsedCanonical(engagementId, kind),
+    loadVerification(engagementId, kind),
   ]);
 
   // Seed the grid with the existing canonical data if anything was
@@ -102,6 +103,7 @@ async function ManualArAgingPane({
   return (
     <ManualArAgingGrid
       engagementId={engagementId}
+      kind={kind}
       initialInvoices={seedInvoices}
       initialAsOfDate={canonical?.asOfDate ?? ""}
       originalFilename={verification?.originalFilename ?? "manual-entry"}

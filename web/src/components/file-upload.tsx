@@ -16,7 +16,12 @@ import { uploadFileAction } from "@/app/app/engagements/actions";
 
 export type FileUploadProps = {
   engagementId: string;
-  kind: "py_audit" | "cy_tb" | "ar_aging" | "subsequent_cash_receipts";
+  kind:
+    | "py_audit"
+    | "cy_tb"
+    | "ar_aging"
+    | "py_ar_aging"
+    | "subsequent_cash_receipts";
   title: string;
   description: string;
   accept: string;
@@ -48,6 +53,7 @@ export function FileUpload({
 }: FileUploadProps) {
   const isParseable =
     kind === "ar_aging" ||
+    kind === "py_ar_aging" ||
     kind === "cy_tb" ||
     kind === "subsequent_cash_receipts";
   const router = useRouter();

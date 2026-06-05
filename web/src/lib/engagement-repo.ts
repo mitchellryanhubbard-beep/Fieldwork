@@ -12,15 +12,21 @@ import {
 
 const SCHEMA_VERSION = "1.0.0" as const;
 
-type FileKind = "py_audit" | "cy_tb" | "ar_aging" | "subsequent_cash_receipts";
+type FileKind =
+  | "py_audit"
+  | "cy_tb"
+  | "ar_aging"
+  | "py_ar_aging"
+  | "subsequent_cash_receipts";
 
 // py_audit is stored as evidence but isn't routed through the intake
 // dispatcher (we don't extract structured data from the signed opinion).
 function isParseableKind(
   kind: FileKind,
-): kind is "ar_aging" | "cy_tb" | "subsequent_cash_receipts" {
+): kind is "ar_aging" | "py_ar_aging" | "cy_tb" | "subsequent_cash_receipts" {
   return (
     kind === "ar_aging" ||
+    kind === "py_ar_aging" ||
     kind === "cy_tb" ||
     kind === "subsequent_cash_receipts"
   );
@@ -121,6 +127,7 @@ export type EngagementDetail = {
   pyAuditFile: FileMeta | null;
   cyTrialBalanceFile: FileMeta | null;
   arAgingFile: FileMeta | null;
+  pyArAgingFile: FileMeta | null;
   subsequentCashReceiptsFile: FileMeta | null;
   createdAt: string;
   updatedAt: string;
@@ -184,6 +191,7 @@ export async function getEngagement(id: string): Promise<EngagementDetail | null
     pyAuditFile: fileByKind.get("py_audit") ?? null,
     cyTrialBalanceFile: fileByKind.get("cy_tb") ?? null,
     arAgingFile: fileByKind.get("ar_aging") ?? null,
+    pyArAgingFile: fileByKind.get("py_ar_aging") ?? null,
     subsequentCashReceiptsFile:
       fileByKind.get("subsequent_cash_receipts") ?? null,
     createdAt: engagement.created_at,
