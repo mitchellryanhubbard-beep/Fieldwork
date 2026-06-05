@@ -42,7 +42,7 @@ function SummaryCard({ tb }: { tb: TrialBalance }) {
         <Stat label="Client" value={tb.clientName} />
         <Stat label="Accounts" value={String(tb.accounts.length)} mono />
         <Stat
-          label="Sections"
+          label="Financial Statement Sections"
           value={`${Object.keys(totals.byCount).length} / 5`}
           mono
         />

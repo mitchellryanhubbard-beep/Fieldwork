@@ -80,7 +80,7 @@ export default async function EngagementWorkpapersPage({
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <nav className="mb-6 text-sm">
         <Link
-          href={`/app/engagements/${id}`}
+          href={`/app/engagements/${id}#section-6`}
           className="text-foreground/60 hover:text-foreground hover:underline"
         >
           ← {v.clientName || "Engagement"}
