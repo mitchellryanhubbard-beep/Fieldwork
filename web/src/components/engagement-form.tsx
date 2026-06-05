@@ -211,8 +211,14 @@ export function EngagementForm({
               key={group.title}
               className="group rounded-md border border-primary/10 bg-background/60"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary [&::-webkit-details-marker]:hidden">
-                <span>{group.title}</span>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary [&::-webkit-details-marker]:hidden">
+                <span className="flex items-baseline gap-2">
+                  <span>{group.title}</span>
+                  <span className="text-[11px] font-normal normal-case tracking-normal text-primary/55">
+                    {group.questions.length}{" "}
+                    {group.questions.length === 1 ? "question" : "questions"}
+                  </span>
+                </span>
                 <span className="text-sm text-primary/40 transition group-open:rotate-90">
                   ▸
                 </span>
