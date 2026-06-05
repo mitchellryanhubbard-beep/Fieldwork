@@ -180,9 +180,9 @@ export default async function EditEngagementPage({
               "accounts-receivable": (
                 <div className="space-y-3">
                   <p className="text-xs text-foreground/60">
-                    PY files can be uploaded for reference or rolled forward
-                    into the CY pane. Each scoped account gets its own
-                    workpaper.
+                    PY files can be uploaded and rolled forward into the CY
+                    pane or you can generate a new workpaper utilizing the
+                    link at the bottom.
                   </p>
                   <Link
                     href={`/app/engagements/${id}/workpapers`}
