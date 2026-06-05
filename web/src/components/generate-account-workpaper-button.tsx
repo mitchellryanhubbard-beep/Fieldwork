@@ -102,7 +102,7 @@ export function GenerateAccountWorkpaperButton({
       : "View workpaper"
     : isPending
       ? "Building…"
-      : "Generate workpaper";
+      : "Generate New Workpaper";
 
   // Block only the new-generation path. Viewing an existing workpaper is
   // always safe — it reads bytes from storage, not the canonical data.
