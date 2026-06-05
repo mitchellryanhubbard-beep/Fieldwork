@@ -732,7 +732,11 @@ function buildAnalyticsSheet(
     sheet.mergeCells(note.number, 1, note.number, 6);
   }
   sheet.addRow([]);
-  pushConclusionRow(sheet, "DSO conclusion (auditor):");
+  pushConclusionRow(
+    sheet,
+    "DSO conclusion (first-pass):",
+    buildDsoConclusion(d),
+  );
   sheet.addRow([]);
 
   // -----------------------------------------------------------------------
@@ -797,7 +801,11 @@ function buildAnalyticsSheet(
     );
   }
   sheet.addRow([]);
-  pushConclusionRow(sheet, "Aging conclusion (auditor):");
+  pushConclusionRow(
+    sheet,
+    "Aging conclusion (first-pass):",
+    buildAgingConclusion(analytics.aging, analytics.totalPastDue),
+  );
   sheet.addRow([]);
 
   // -----------------------------------------------------------------------
@@ -907,12 +915,93 @@ function pushRow(
   return row;
 }
 
-function pushConclusionRow(sheet: ExcelJS.Worksheet, label: string) {
-  const row = sheet.addRow([label, "", "", "", "", ""]);
+function pushConclusionRow(
+  sheet: ExcelJS.Worksheet,
+  label: string,
+  text?: string,
+) {
+  const row = sheet.addRow([label, text ?? "", "", "", "", ""]);
   row.getCell(1).font = { bold: true };
+  row.getCell(2).alignment = { vertical: "top", wrapText: true };
   row.alignment = { vertical: "top", wrapText: true };
-  row.height = 40;
+  // Generous row height when we have first-pass text; the auditor can
+  // resize after edit. Keep the old 40 when blank for the manual case.
+  row.height = text ? Math.min(160, Math.max(60, Math.ceil(text.length / 12))) : 40;
   sheet.mergeCells(row.number, 2, row.number, 6);
+}
+
+// First-pass DSO conclusion — narrates revenue/AR change, DSO movement,
+// flag status, and industry-benchmark gap. Audit-ready voice; the
+// auditor sees this as a starting point in the workpaper and edits.
+function buildDsoConclusion(d: import("@/lib/ar-analytics").DsoBlock): string {
+  const fmt$ = (n: number) =>
+    `$${Math.round(Math.abs(n)).toLocaleString("en-US")}`;
+  const dir = (n: number) =>
+    n > 0 ? "increased" : n < 0 ? "decreased" : "held flat";
+  const revDelta = d.revenueCy - d.revenuePy;
+  const arDelta = d.arCy - d.arPy;
+  const revPct =
+    d.revenuePy !== 0 ? ((revDelta / d.revenuePy) * 100).toFixed(1) : "n/a";
+  const arPct =
+    d.arPy !== 0 ? ((arDelta / d.arPy) * 100).toFixed(1) : "n/a";
+  const dsoCyStr =
+    d.dsoCy === null ? "n/a" : `${d.dsoCy.toFixed(1)} days`;
+  const dsoPyStr =
+    d.dsoPy === null ? "n/a" : `${d.dsoPy.toFixed(1)} days`;
+  const dsoChangeStr =
+    d.dsoChangeDays === null
+      ? ""
+      : ` (${d.dsoChangeDays >= 0 ? "+" : ""}${d.dsoChangeDays.toFixed(1)} days, ${
+          d.dsoChangePct === null
+            ? ""
+            : `${(d.dsoChangePct * 100).toFixed(1)}%`
+        })`;
+  const benchmark =
+    d.industryBenchmark !== null && d.dsoCy !== null
+      ? `Industry benchmark is ~${d.industryBenchmark} days; CY DSO is ${
+          d.dsoCy > d.industryBenchmark
+            ? `${(d.dsoCy - d.industryBenchmark).toFixed(1)} days above`
+            : d.dsoCy < d.industryBenchmark
+              ? `${(d.industryBenchmark - d.dsoCy).toFixed(1)} days below`
+              : "in line with"
+        } the benchmark.`
+      : "";
+  const flag = d.flagged
+    ? ` Flagged — change exceeds the ${d.flagDaysThreshold}-day / ${(d.flagPctThreshold * 100).toFixed(0)}% threshold; consider whether collection deterioration or revenue-recognition cutoff is driving the movement and tie out to subsequent cash + allowance work.`
+    : " No threshold breach; collection cadence appears consistent with PY.";
+  return (
+    `Revenue ${dir(revDelta)} from ${fmt$(d.revenuePy)} to ${fmt$(d.revenueCy)} (${revPct}%); AR ${dir(arDelta)} from ${fmt$(d.arPy)} to ${fmt$(d.arCy)} (${arPct}%). ` +
+    `DSO moved from ${dsoPyStr} to ${dsoCyStr}${dsoChangeStr}. ` +
+    `${benchmark}${flag}`.trim()
+  );
+}
+
+// First-pass aging-composition conclusion — narrates total AR, the
+// healthy/concerning split, and the past-due exposure.
+function buildAgingConclusion(
+  aging: import("@/lib/ar-analytics").AgingCompositionBlock,
+  pastDue: import("@/lib/ar-analytics").PastDueBlock,
+): string {
+  const fmt$ = (n: number) =>
+    `$${Math.round(Math.abs(n)).toLocaleString("en-US")}`;
+  const pctOf = (label: string): number => {
+    const b = aging.buckets.find((x) => x.label === label);
+    return b ? b.percentOfTotal : 0;
+  };
+  const currentPct = ((pctOf("Current") + pctOf("1-30 Days")) * 100).toFixed(1);
+  const d3160 = (pctOf("31-60 Days") * 100).toFixed(1);
+  const d6190 = (pctOf("61-90 Days") * 100).toFixed(1);
+  const d90 = (pctOf("90+ Days") * 100).toFixed(1);
+  const pdPct = (pastDue.pastDuePct * 100).toFixed(1);
+  const flag = pastDue.flagged
+    ? ` Flagged — past-due ratio exceeds the ${(pastDue.flagPctThreshold * 100).toFixed(0)}% threshold; concentrate Valuation testing on customers carrying balances aged >60 days and corroborate with subsequent cash receipts and allowance adequacy.`
+    : " Past-due ratio is within the threshold; allowance evaluation may rely primarily on the 90+ bucket.";
+  return (
+    `Total AR of ${fmt$(aging.total)} as of ${aging.asOfDate ?? "the balance-sheet date"}. ` +
+    `Current + 1-30 day balances represent ${currentPct}% of the book; 31-60 day balances ${d3160}%, ` +
+    `61-90 day balances ${d6190}%, and balances aged 90+ days ${d90}%. ` +
+    `Total past-due (31+ days) of ${fmt$(pastDue.pastDueDollar)} (${pdPct}% of AR).${flag}`
+  );
 }
 
 function safePct(numerator: number, denominator: number): number | null {
