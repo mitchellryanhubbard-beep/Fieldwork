@@ -21,7 +21,10 @@ const SYSTEM_PROMPT =
   "If a column isn't present (e.g. terms, sales rep), return an empty string. " +
   "If a date isn't in ISO format, normalize it to YYYY-MM-DD. " +
   "Aging bucket amounts must sum to the invoice total; if the source PDF has rounding, prefer the invoice total. " +
-  "Customer subtotal rows, banner rows, and confidentiality notes are NOT invoices — skip them.";
+  "Customer subtotal rows, banner rows, and confidentiality notes are NOT invoices — skip them. " +
+  "TB account references / tie-out lines (e.g. 'TB account 1200', 'Per general ledger') are also NOT customers — " +
+  "the tell is that they carry a total with NO dollars in any aged bucket (current, 1-30, 31-60, 61-90, 90+). " +
+  "A real customer's balance is always distributed across at least one aging bucket; if every bucket is zero, skip the row.";
 
 const AGING_JSON_SCHEMA = {
   type: "object",
@@ -156,6 +159,21 @@ function rollUp(extracted: {
   asOfDate: string | null;
   invoices: ArInvoice[];
 }): ArAging {
+  // Drop any row that came back with a total but no aged-bucket
+  // breakdown — these are typically TB tie-out / reconciliation lines
+  // (e.g. "TB account 1200") that don't represent a real customer.
+  // Claude tries to skip them via the prompt, but a defense-in-depth
+  // filter here catches what slips through.
+  const filtered = extracted.invoices.filter((inv) => {
+    const bucketSum =
+      Math.abs(inv.current) +
+      Math.abs(inv.d1_30) +
+      Math.abs(inv.d31_60) +
+      Math.abs(inv.d61_90) +
+      Math.abs(inv.d90_plus);
+    return bucketSum > 0;
+  });
+  extracted = { ...extracted, invoices: filtered };
   const byNum = new Map<string, ArCustomer>();
   for (const inv of extracted.invoices) {
     const existing = byNum.get(inv.custNum);

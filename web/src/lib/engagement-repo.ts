@@ -224,27 +224,15 @@ export async function uploadEngagementFile(
 ): Promise<FileMeta> {
   const sb = getServerSupabase();
 
-  // Uniqueness check: every replacement upload into a given receptacle
-  // must carry a different filename than the one currently sitting in
-  // it. Keeps the audit trail unambiguous — "TestCompany_TB.xlsx" and
-  // "TestCompany_TB.xlsx" looking identical in the UI is a recipe for
-  // versioning confusion.
+  // Each receptacle holds exactly one file; replacement (same name or
+  // not) is the only path. No uniqueness check needed — we just swap
+  // the storage path + metadata below.
   const existing = await sb
     .from("engagement_files")
-    .select("storage_path, original_filename")
+    .select("storage_path")
     .eq("engagement_id", engagementId)
     .eq("kind", kind)
     .maybeSingle();
-
-  if (
-    existing.data &&
-    existing.data.original_filename.trim().toLowerCase() ===
-      file.name.trim().toLowerCase()
-  ) {
-    throw new Error(
-      `A file named "${file.name}" is already uploaded for this receptacle. Rename your replacement file so the audit trail stays unambiguous.`,
-    );
-  }
 
   const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
   const storagePath = `engagements/${engagementId}/${kind}-${Date.now()}-${safeName}`;

@@ -161,6 +161,19 @@ function parseInvoiceLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
     if (!/^[A-Z]\d{2,5}$/.test(c1)) continue;
 
     const invoiceLevelD90Plus = readCellNumber(sheet, r, 13);
+    const current = readCellNumber(sheet, r, 9);
+    const d1_30 = readCellNumber(sheet, r, 10);
+    const d31_60 = readCellNumber(sheet, r, 11);
+    const d61_90 = readCellNumber(sheet, r, 12);
+    // Reject rows with no aged-bucket breakdown — TB tie-out lines
+    // and other reconciliation rows often carry a total but no aging.
+    const bucketSum =
+      Math.abs(current) +
+      Math.abs(d1_30) +
+      Math.abs(d31_60) +
+      Math.abs(d61_90) +
+      Math.abs(invoiceLevelD90Plus);
+    if (bucketSum === 0) continue;
     invoices.push({
       custNum: c1,
       custName: readCellText(sheet, r, 2).trim(),
@@ -170,10 +183,10 @@ function parseInvoiceLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
       terms: readCellText(sheet, r, 6).trim(),
       salesRep: readCellText(sheet, r, 7).trim(),
       total: readCellNumber(sheet, r, 8),
-      current: readCellNumber(sheet, r, 9),
-      d1_30: readCellNumber(sheet, r, 10),
-      d31_60: readCellNumber(sheet, r, 11),
-      d61_90: readCellNumber(sheet, r, 12),
+      current,
+      d1_30,
+      d31_60,
+      d61_90,
       d90_plus: invoiceLevelD90Plus,
       // Hartwell layout has a single 90+ column; the split fields
       // aren't available here, so put everything on d91_120 and zero
@@ -232,6 +245,24 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
     const d120_plus =
       map.d120_plus != null ? readCellNumber(sheet, r, map.d120_plus) : 0;
     const d90_plus = d91_120 + d120_plus;
+    const current = map.current != null ? readCellNumber(sheet, r, map.current) : 0;
+    const d1_30 = map.d1_30 != null ? readCellNumber(sheet, r, map.d1_30) : 0;
+    const d31_60 = map.d31_60 != null ? readCellNumber(sheet, r, map.d31_60) : 0;
+    const d61_90 = map.d61_90 != null ? readCellNumber(sheet, r, map.d61_90) : 0;
+
+    // Reject rows that carry a total but no aged-bucket breakdown. A
+    // real customer's balance is always distributed across at least
+    // one of the aging columns; rows like "TB account 1200" or other
+    // tie-out/reconciliation lines often show a total with no aging
+    // detail and slip past the label filter.
+    const bucketSum =
+      Math.abs(current) +
+      Math.abs(d1_30) +
+      Math.abs(d31_60) +
+      Math.abs(d61_90) +
+      Math.abs(d91_120) +
+      Math.abs(d120_plus);
+    if (bucketSum === 0) continue;
 
     const invoiceNum =
       invoiceCol != null
@@ -246,10 +277,10 @@ function parseCustomerLevel(sheet: ExcelJS.Worksheet): ArInvoice[] {
       terms: "",
       salesRep: "",
       total,
-      current: map.current != null ? readCellNumber(sheet, r, map.current) : 0,
-      d1_30: map.d1_30 != null ? readCellNumber(sheet, r, map.d1_30) : 0,
-      d31_60: map.d31_60 != null ? readCellNumber(sheet, r, map.d31_60) : 0,
-      d61_90: map.d61_90 != null ? readCellNumber(sheet, r, map.d61_90) : 0,
+      current,
+      d1_30,
+      d31_60,
+      d61_90,
       d90_plus,
       d91_120,
       d120_plus,
