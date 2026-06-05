@@ -28,6 +28,12 @@ export type FileUploadProps = {
   verification?: {
     status: "pending" | "confirmed" | "failed";
   } | null;
+  // Anchor id (e.g. "section-6") to scroll to after a successful
+  // upload. Use this when the upload card lives inside collapsible UI
+  // — the per-card scroll restore can't recover if the surrounding
+  // accordion closes during refresh. The anchor guarantees the user
+  // lands on the same section header they came from.
+  returnAnchor?: string;
 };
 
 export function FileUpload({
@@ -38,6 +44,7 @@ export function FileUpload({
   accept,
   current,
   verification,
+  returnAnchor,
 }: FileUploadProps) {
   const isParseable =
     kind === "ar_aging" ||
@@ -140,6 +147,17 @@ export function FileUpload({
       if (inputRef.current) inputRef.current.value = "";
       setPickerKey((k) => k + 1);
       router.refresh();
+      // If the caller supplied a return anchor (collapsible-section
+      // case), scroll the named section header into view a tick after
+      // the refresh paints so the user lands on the same section.
+      if (returnAnchor) {
+        targetTopRef.current = null;
+        requestAnimationFrame(() => {
+          document
+            .getElementById(returnAnchor)
+            ?.scrollIntoView({ behavior: "instant", block: "start" });
+        });
+      }
     });
   }
 

@@ -161,6 +161,7 @@ export default async function EditEngagementPage({
                     accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
                     current={detail.arAgingFile}
                     verification={verifications.ar_aging}
+                    returnAnchor="section-6"
                   />
                   <FileUpload
                     engagementId={id}
@@ -170,6 +171,7 @@ export default async function EditEngagementPage({
                     accept=".xlsx,.xls,.csv,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf"
                     current={detail.subsequentCashReceiptsFile}
                     verification={verifications.subsequent_cash_receipts}
+                    returnAnchor="section-6"
                   />
                 </div>
               ),
