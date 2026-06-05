@@ -193,14 +193,25 @@ export function regenerateAltProceduresSelections(
     }
     modified += picks.length;
 
-    // Refresh the Total row's SUM formula on the verified-$ column so
-    // the range covers exactly the populated rows.
-    if (effectiveTotalRow !== null && layout.colVerified > 0 && picks.length > 0) {
-      const colL = colNumToLetter(layout.colVerified);
-      sheet.getRow(effectiveTotalRow).getCell(layout.colVerified).value = {
-        formula: `SUM(${colL}${effectiveFirstDataRow}:${colL}${effectiveLastDataRow})`,
-        result: totalVerified,
-      };
+    // Refresh the Total row's SUM formulas so the range covers exactly
+    // the populated rows. Sum both the Invoice Amount column (always
+    // present on these layouts — drives the lead-sheet tie-out) and
+    // the Verified column (when present — alt-procedure layouts only).
+    if (effectiveTotalRow !== null && picks.length > 0) {
+      if (layout.colInvAmt > 0) {
+        const colL = colNumToLetter(layout.colInvAmt);
+        sheet.getRow(effectiveTotalRow).getCell(layout.colInvAmt).value = {
+          formula: `SUM(${colL}${effectiveFirstDataRow}:${colL}${effectiveLastDataRow})`,
+          result: totalSelected,
+        };
+      }
+      if (layout.colVerified > 0) {
+        const colL = colNumToLetter(layout.colVerified);
+        sheet.getRow(effectiveTotalRow).getCell(layout.colVerified).value = {
+          formula: `SUM(${colL}${effectiveFirstDataRow}:${colL}${effectiveLastDataRow})`,
+          result: totalVerified,
+        };
+      }
     }
 
     // Replace the overall conclusion with one that reflects the actual
@@ -256,16 +267,21 @@ function detectLayout(sheet: ExcelJS.Worksheet): Layout | null {
     let hasSel = false;
     let hasCustomer = false;
     let hasInvoice = false;
-    let hasAlt = false;
+    let hasInvAmt = false;
     for (let c = 1; c <= sheet.columnCount; c++) {
       const text = readText(row.getCell(c)).trim();
       cellTexts.set(c, text);
-      if (/^sel\s*#/i.test(text)) hasSel = true;
+      if (/^sel\s*#|^selection\s*#/i.test(text)) hasSel = true;
       if (/^customer/i.test(text)) hasCustomer = true;
       if (/^invoice\s*#/i.test(text)) hasInvoice = true;
-      if (/^alt(ernative)?\s+procedure/i.test(text)) hasAlt = true;
+      if (/inv\s*amt|invoice\s*amount|^amount|^balance/i.test(text))
+        hasInvAmt = true;
     }
-    if (!(hasSel && hasCustomer && hasInvoice && hasAlt)) continue;
+    // Match anything that looks like a per-invoice testing table — Sel
+    // # + Customer + Invoice # + an amount column. Alt-Procedure /
+    // Evidence / etc. become optional; Detail-Testing-style sheets
+    // without them now match too.
+    if (!(hasSel && hasCustomer && hasInvoice && hasInvAmt)) continue;
 
     let colSelNum = 0;
     let colCustomer = 0;
