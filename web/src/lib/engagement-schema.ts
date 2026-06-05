@@ -100,12 +100,31 @@ export const EngagementSetupSchema = z
     pyAuditFile: FileReferenceSchema,
     cyTrialBalanceFile: FileReferenceSchema,
     planningQuestionnaire: QuestionnaireAnswersSchema,
-    materiality: z.object({
-      currency: z.literal("USD"),
-      overallMateriality: z.number().positive(),
-      performanceMateriality: z.number().positive(),
-      clearlyTrivialThreshold: z.number().positive(),
-    }),
+    materiality: z
+      .object({
+        currency: z.literal("USD"),
+        overallMateriality: z.number().positive(),
+        performanceMateriality: z.number().positive(),
+        clearlyTrivialThreshold: z.number().positive(),
+      })
+      .superRefine((m, ctx) => {
+        if (m.performanceMateriality > m.overallMateriality) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["performanceMateriality"],
+            message:
+              "Performance materiality cannot exceed overall materiality",
+          });
+        }
+        if (m.clearlyTrivialThreshold > m.performanceMateriality) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["clearlyTrivialThreshold"],
+            message:
+              "Clearly trivial threshold cannot exceed performance materiality",
+          });
+        }
+      }),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
   })
@@ -134,6 +153,27 @@ export const EngagementFormSchema = z
       "Clearly trivial threshold must be greater than 0",
     ),
   })
-  .strict();
+  .strict()
+  // Materiality must descend: PM ≤ OM and CTT ≤ PM. Errors attach to
+  // the lower field so the red message appears under the value that
+  // needs to come down.
+  .superRefine((data, ctx) => {
+    if (data.performanceMateriality > data.overallMateriality) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["performanceMateriality"],
+        message:
+          "Performance materiality cannot exceed overall materiality",
+      });
+    }
+    if (data.clearlyTrivialThreshold > data.performanceMateriality) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["clearlyTrivialThreshold"],
+        message:
+          "Clearly trivial threshold cannot exceed performance materiality",
+      });
+    }
+  });
 
 export type EngagementFormValues = z.infer<typeof EngagementFormSchema>;
