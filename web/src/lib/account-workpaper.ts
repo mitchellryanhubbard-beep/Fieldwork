@@ -740,24 +740,46 @@ function buildAnalyticsSheet(
   sheet.addRow([]);
 
   // -----------------------------------------------------------------------
-  // Aging composition (CY)
+  // Aging composition (CY vs PY when uploaded)
   // -----------------------------------------------------------------------
-  sectionHeader(sheet, "Aging composition (CY)");
-  const agingNote = sheet.addRow([
-    "PY aging not uploaded — PY composition comparison will appear when a PY AR Aging is supported (separate slice).",
-  ]);
-  agingNote.font = { italic: true, color: { argb: "FF555555" } };
-  sheet.mergeCells(agingNote.number, 1, agingNote.number, 6);
+  const hasPy = analytics.pyAging !== null;
+  sectionHeader(
+    sheet,
+    hasPy ? "Aging composition (CY vs PY)" : "Aging composition (CY)",
+  );
+  if (!hasPy) {
+    const agingNote = sheet.addRow([
+      "PY aging not uploaded — upload a PY AR Aging file in section 6 to see PY/CY composition comparison.",
+    ]);
+    agingNote.font = { italic: true, color: { argb: "FF555555" } };
+    sheet.mergeCells(agingNote.number, 1, agingNote.number, 6);
+  }
 
-  const agingHdr = sheet.addRow([
-    "Aging Bucket",
-    "$ Amount",
-    "% of Total",
-    "",
-    "",
-    "",
-  ]);
+  const agingHdr = hasPy
+    ? sheet.addRow([
+        "Aging Bucket",
+        "CY $",
+        "CY %",
+        "PY $",
+        "PY %",
+        "Δ %",
+      ])
+    : sheet.addRow([
+        "Aging Bucket",
+        "$ Amount",
+        "% of Total",
+        "",
+        "",
+        "",
+      ]);
   styleTableHeader(agingHdr);
+
+  // Lookup helper for PY buckets by label so each row pulls the
+  // matching PY bucket regardless of array order.
+  const pyByLabel = new Map<string, AgingBucket>();
+  if (analytics.pyAging) {
+    for (const b of analytics.pyAging.buckets) pyByLabel.set(b.label, b);
+  }
 
   // Capture the bucket rows so we can SUM them on the Total row and
   // reference the Total cell for the % formulas. Total goes first in the
@@ -765,8 +787,19 @@ function buildAnalyticsSheet(
   // handles forward refs fine).
   const bucketRows: { row: ExcelJS.Row; bucket: AgingBucket }[] = [];
   for (const b of analytics.aging.buckets) {
-    const row = sheet.addRow([b.label, b.amount, "", "", "", ""]);
+    const pyMatch = pyByLabel.get(b.label);
+    const row = hasPy
+      ? sheet.addRow([
+          b.label,
+          b.amount,
+          "",
+          pyMatch?.amount ?? 0,
+          "",
+          "",
+        ])
+      : sheet.addRow([b.label, b.amount, "", "", "", ""]);
     row.getCell(2).numFmt = USD_FMT;
+    if (hasPy) row.getCell(4).numFmt = USD_FMT;
     if (
       (b.label === "61-90 Days" || b.label === "90+ Days") &&
       b.amount > 0
@@ -778,7 +811,9 @@ function buildAnalyticsSheet(
   const firstBucketRow = bucketRows[0].row.number;
   const lastBucketRow = bucketRows[bucketRows.length - 1].row.number;
 
-  const totalRow = sheet.addRow(["Total", "", "", "", "", ""]);
+  const totalRow = hasPy
+    ? sheet.addRow(["Total", "", "", "", "", ""])
+    : sheet.addRow(["Total", "", "", "", "", ""]);
   totalRow.font = { bold: true };
   setFormula(
     totalRow.getCell(2),
@@ -787,6 +822,15 @@ function buildAnalyticsSheet(
     USD_FMT,
   );
   setFormula(totalRow.getCell(3), `1`, 1, PCT_FMT);
+  if (hasPy) {
+    setFormula(
+      totalRow.getCell(4),
+      `SUM(D${firstBucketRow}:D${lastBucketRow})`,
+      analytics.pyAging?.total ?? 0,
+      USD_FMT,
+    );
+    setFormula(totalRow.getCell(5), `1`, 1, PCT_FMT);
+  }
   totalRow.eachCell((c) => {
     c.border = { top: { style: "thin" }, bottom: { style: "double" } };
   });
@@ -799,12 +843,32 @@ function buildAnalyticsSheet(
       bucket.percentOfTotal,
       PCT_FMT,
     );
+    if (hasPy) {
+      const pyMatch = pyByLabel.get(bucket.label);
+      setFormula(
+        row.getCell(5),
+        `IFERROR(D${row.number}/D${totalRow.number},0)`,
+        pyMatch?.percentOfTotal ?? 0,
+        PCT_FMT,
+      );
+      // Δ% = CY% - PY%, reported in percentage points
+      setFormula(
+        row.getCell(6),
+        `C${row.number}-E${row.number}`,
+        bucket.percentOfTotal - (pyMatch?.percentOfTotal ?? 0),
+        PCT_FMT,
+      );
+    }
   }
   sheet.addRow([]);
   pushConclusionRow(
     sheet,
     "Aging conclusion (first-pass):",
-    buildAgingConclusion(analytics.aging, analytics.totalPastDue),
+    buildAgingConclusion(
+      analytics.aging,
+      analytics.totalPastDue,
+      analytics.pyAging,
+    ),
   );
   sheet.addRow([]);
 
@@ -977,30 +1041,55 @@ function buildDsoConclusion(d: import("@/lib/ar-analytics").DsoBlock): string {
 }
 
 // First-pass aging-composition conclusion — narrates total AR, the
-// healthy/concerning split, and the past-due exposure.
+// healthy/concerning split, and the past-due exposure. When PY aging
+// is supplied, appends a PY vs CY shift comparison so the auditor can
+// see whether the aging profile has deteriorated.
 function buildAgingConclusion(
   aging: import("@/lib/ar-analytics").AgingCompositionBlock,
   pastDue: import("@/lib/ar-analytics").PastDueBlock,
+  pyAging: import("@/lib/ar-analytics").AgingCompositionBlock | null = null,
 ): string {
   const fmt$ = (n: number) =>
     `$${Math.round(Math.abs(n)).toLocaleString("en-US")}`;
-  const pctOf = (label: string): number => {
-    const b = aging.buckets.find((x) => x.label === label);
-    return b ? b.percentOfTotal : 0;
-  };
-  const currentPct = ((pctOf("Current") + pctOf("1-30 Days")) * 100).toFixed(1);
-  const d3160 = (pctOf("31-60 Days") * 100).toFixed(1);
-  const d6190 = (pctOf("61-90 Days") * 100).toFixed(1);
-  const d90 = (pctOf("90+ Days") * 100).toFixed(1);
+  const pctOf =
+    (block: import("@/lib/ar-analytics").AgingCompositionBlock) =>
+    (label: string): number => {
+      const b = block.buckets.find((x) => x.label === label);
+      return b ? b.percentOfTotal : 0;
+    };
+  const cyPct = pctOf(aging);
+  const currentPct = ((cyPct("Current") + cyPct("1-30 Days")) * 100).toFixed(1);
+  const d3160 = (cyPct("31-60 Days") * 100).toFixed(1);
+  const d6190 = (cyPct("61-90 Days") * 100).toFixed(1);
+  const d90 = (cyPct("90+ Days") * 100).toFixed(1);
   const pdPct = (pastDue.pastDuePct * 100).toFixed(1);
   const flag = pastDue.flagged
     ? ` Flagged — past-due ratio exceeds the ${(pastDue.flagPctThreshold * 100).toFixed(0)}% threshold; concentrate Valuation testing on customers carrying balances aged >60 days and corroborate with subsequent cash receipts and allowance adequacy.`
     : " Past-due ratio is within the threshold; allowance evaluation may rely primarily on the 90+ bucket.";
+
+  let pyClause = "";
+  if (pyAging) {
+    const pyPct = pctOf(pyAging);
+    const pyPastDuePct =
+      pyPct("31-60 Days") + pyPct("61-90 Days") + pyPct("90+ Days");
+    const cyPastDuePct = pastDue.pastDuePct;
+    const delta = (cyPastDuePct - pyPastDuePct) * 100;
+    const dir =
+      Math.abs(delta) < 0.05
+        ? "held flat"
+        : delta > 0
+          ? `worsened by ${delta.toFixed(1)} pp`
+          : `improved by ${Math.abs(delta).toFixed(1)} pp`;
+    pyClause =
+      ` Versus PY (total AR ${fmt$(pyAging.total)}), the past-due share ${dir} ` +
+      `(PY ${(pyPastDuePct * 100).toFixed(1)}% → CY ${pdPct}%).`;
+  }
+
   return (
     `Total AR of ${fmt$(aging.total)} as of ${aging.asOfDate ?? "the balance-sheet date"}. ` +
     `Current + 1-30 day balances represent ${currentPct}% of the book; 31-60 day balances ${d3160}%, ` +
     `61-90 day balances ${d6190}%, and balances aged 90+ days ${d90}%. ` +
-    `Total past-due (31+ days) of ${fmt$(pastDue.pastDueDollar)} (${pdPct}% of AR).${flag}`
+    `Total past-due (31+ days) of ${fmt$(pastDue.pastDueDollar)} (${pdPct}% of AR).${pyClause}${flag}`
   );
 }
 

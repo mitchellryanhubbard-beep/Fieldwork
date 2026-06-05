@@ -9,6 +9,7 @@ import { computeArAnalytics } from "@/lib/ar-analytics";
 import { runScrTesting } from "@/lib/scr-testing";
 import {
   loadArAgingForEngagement,
+  loadPyArAgingForEngagement,
   loadSubsequentCashReceiptsForEngagement,
   loadTrialBalanceForEngagement,
   requireUploadsConfirmed,
@@ -151,6 +152,11 @@ export async function generateAccountWorkpaperById(
     sampleResults,
   );
 
+  // PY aging is optional. When uploaded + verified, computeArAnalytics
+  // emits a PY composition block so the workpaper can show a side-by-
+  // side PY/CY aging table; when missing, the PY block is left null.
+  const pyAging = await loadPyArAgingForEngagement(engagementId);
+
   // Analytics — only run when we have an aging file. Computed off TB +
   // aging, no Claude call. The generator silently skips the Analytics tab
   // when this is undefined.
@@ -159,6 +165,7 @@ export async function generateAccountWorkpaperById(
         account,
         trialBalance,
         aging,
+        pyAging,
         industry: engagement.industry,
       })
     : undefined;

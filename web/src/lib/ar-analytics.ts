@@ -65,6 +65,7 @@ export type PastDueBlock = {
 export type ArAnalytics = {
   dso: DsoBlock;
   aging: AgingCompositionBlock;
+  pyAging: AgingCompositionBlock | null;
   topFive: ConcentrationRow[];
   totalPastDue: PastDueBlock;
 };
@@ -73,6 +74,9 @@ export function computeArAnalytics(args: {
   account: TrialBalanceAccount;
   trialBalance: TrialBalance;
   aging: ArAging;
+  // Optional prior-year AR aging. Drives the PY column in the aging
+  // composition table when supplied; null leaves PY out.
+  pyAging?: ArAging | null;
   industry: string;
   flagDsoChangeDays?: number;
   flagDsoChangePct?: number;
@@ -91,10 +95,13 @@ export function computeArAnalytics(args: {
   });
 
   const aging = computeAgingComposition(args.aging);
+  const pyAging = args.pyAging
+    ? computeAgingComposition(args.pyAging)
+    : null;
   const topFive = computeConcentration(args.aging, 5);
   const totalPastDue = computePastDue(args.aging, flagPastDuePct);
 
-  return { dso, aging, topFive, totalPastDue };
+  return { dso, aging, pyAging, topFive, totalPastDue };
 }
 
 function computeDso(args: {
