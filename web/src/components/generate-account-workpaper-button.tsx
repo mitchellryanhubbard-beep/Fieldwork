@@ -109,15 +109,22 @@ export function GenerateAccountWorkpaperButton({
   const isBlocked = !alreadyGenerated && !!generationBlockedReason;
 
   return (
-    <Button
-      type="button"
-      variant={alreadyGenerated ? "gold" : "goldOutline"}
-      onClick={handleClick}
-      disabled={isPending || isBlocked}
-      size="sm"
-      title={isBlocked ? generationBlockedReason : undefined}
-    >
-      {label}
-    </Button>
+    <div className="flex flex-col items-start gap-1">
+      <Button
+        type="button"
+        variant={alreadyGenerated ? "gold" : "goldOutline"}
+        onClick={handleClick}
+        disabled={isPending || isBlocked}
+        size="sm"
+        title={isBlocked ? generationBlockedReason : undefined}
+      >
+        {label}
+      </Button>
+      {isBlocked ? (
+        <p className="text-xs text-destructive">
+          {generationBlockedReason}
+        </p>
+      ) : null}
+    </div>
   );
 }
