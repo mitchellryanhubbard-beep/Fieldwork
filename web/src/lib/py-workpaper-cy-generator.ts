@@ -17,6 +17,8 @@ import {
 } from "@/lib/py-workpaper-repo";
 import { regenerateAltProceduresSelections } from "@/lib/alt-procedures-rollforward";
 import { rolloverDsoWorkpaper } from "@/lib/dso-workpaper-rollforward";
+import { rolloverLeadSheets } from "@/lib/lead-sheet-rollforward";
+import { rolloverMethodologyTabs } from "@/lib/methodology-rollforward";
 import {
   writeProcedureBoxes,
   hasExistingProcedureBox,
@@ -115,6 +117,20 @@ export async function generateCyWorkpaperById(
   // engine then skips claimed sheets so it can't wipe the labels or
   // misclassify the DSO computation table as a trend table.
   const dsoResult = rolloverDsoWorkpaper(wb, trialBalance, arAging);
+
+  // Lead-sheet rollover: refresh Per G/L + Per Audit dollar columns
+  // from the CY TB and recompute the bold net SUM. Detected by
+  // column-header signature (Account / Per G/L / Per Audit /
+  // Difference) so it works on any tab named for the FSLI.
+  const leadSheetResult = rolloverLeadSheets(wb, trialBalance);
+
+  // Methodology + Results tabs: refresh in-line $ values for the three
+  // materiality lines (OM/PM/CTT) and TB-driven population figures.
+  const methodologyResult = rolloverMethodologyTabs(wb, {
+    engagement,
+    trialBalance,
+    arAging,
+  });
 
   // Process year-labelled columns. Returns total cell-updates + per-row
   // mode info so we know whether to shift narrative dates afterwards.
