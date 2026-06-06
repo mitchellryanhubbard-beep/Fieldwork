@@ -99,6 +99,17 @@ export function EngagementForm({
       }
       toast.success(mode === "create" ? "Engagement created" : "Engagement saved");
       router.refresh();
+      // On save, scroll the user down to Source files (section 4) —
+      // create-mode redirects there via the server action; edit-mode
+      // mirrors that by setting the hash on the current page so the
+      // user always lands at the next step of the flow.
+      if (mode === "edit" && typeof window !== "undefined") {
+        const target = document.getElementById("section-4");
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          history.replaceState(null, "", "#section-4");
+        }
+      }
     });
   });
 
