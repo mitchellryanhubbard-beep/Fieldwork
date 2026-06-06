@@ -248,6 +248,8 @@ type Layout = {
   colVerified: number;
   colFullyCovered: number;
   colConclusion: number;
+  colBasis: number;
+  colException: number;
   firstDataRow: number;
   lastDataRow: number;
   totalRow: number | null;
@@ -266,22 +268,29 @@ function detectLayout(sheet: ExcelJS.Worksheet): Layout | null {
     const cellTexts = new Map<number, string>();
     let hasSel = false;
     let hasCustomer = false;
-    let hasInvoice = false;
-    let hasInvAmt = false;
+    let hasAmount = false;
     for (let c = 1; c <= sheet.columnCount; c++) {
       const text = readText(row.getCell(c)).trim();
       cellTexts.set(c, text);
-      if (/^sel\s*#|^selection\s*#/i.test(text)) hasSel = true;
+      if (
+        /^sel\s*#|^selection\s*#|^item\s*#|^sample\s*#|^#\s*$/i.test(text)
+      ) {
+        hasSel = true;
+      }
       if (/^customer/i.test(text)) hasCustomer = true;
-      if (/^invoice\s*#/i.test(text)) hasInvoice = true;
-      if (/inv\s*amt|invoice\s*amount|^amount|^balance/i.test(text))
-        hasInvAmt = true;
+      if (
+        /inv\s*amt|invoice\s*amount|^amount|^balance|^bal\s|^total\s*\$?|^value$/i.test(
+          text,
+        )
+      ) {
+        hasAmount = true;
+      }
     }
-    // Match anything that looks like a per-invoice testing table — Sel
-    // # + Customer + Invoice # + an amount column. Alt-Procedure /
-    // Evidence / etc. become optional; Detail-Testing-style sheets
-    // without them now match too.
-    if (!(hasSel && hasCustomer && hasInvoice && hasInvAmt)) continue;
+    // Sel # + Customer + Amount is enough to detect a testing table.
+    // Invoice # and Alt-Procedure / Evidence / etc. all become optional
+    // so customer-level multi-assertion detail-testing layouts match
+    // alongside the invoice-level alt-procedure layouts.
+    if (!(hasSel && hasCustomer && hasAmount)) continue;
 
     let colSelNum = 0;
     let colCustomer = 0;
@@ -293,17 +302,29 @@ function detectLayout(sheet: ExcelJS.Worksheet): Layout | null {
     let colVerified = 0;
     let colFullyCovered = 0;
     let colConclusion = 0;
+    let colBasis = 0;
+    let colException = 0;
     for (const [c, text] of cellTexts) {
-      if (/^sel\s*#/i.test(text)) colSelNum = c;
+      if (
+        /^sel\s*#|^selection\s*#|^item\s*#|^sample\s*#|^#\s*$/i.test(text)
+      )
+        colSelNum = c;
       else if (/^customer/i.test(text)) colCustomer = c;
       else if (/^invoice\s*#/i.test(text)) colInvoiceNum = c;
-      else if (/inv\s*amt|invoice\s*amount/i.test(text)) colInvAmt = c;
+      else if (
+        /inv\s*amt|invoice\s*amount|^amount|^balance|^bal\s|^total\s*\$?|^value$/i.test(
+          text,
+        )
+      )
+        colInvAmt = c;
       else if (/^aging/i.test(text)) colAging = c;
       else if (/^alt(ernative)?\s+procedure/i.test(text)) colAltProc = c;
       else if (/^evidence/i.test(text)) colEvidence = c;
       else if (/amt\s*verified|verified\s*\$/i.test(text)) colVerified = c;
       else if (/fully\s*covered|^covered\??$/i.test(text)) colFullyCovered = c;
       else if (/conclusion/i.test(text)) colConclusion = c;
+      else if (/^basis|^rationale|^reason\b/i.test(text)) colBasis = c;
+      else if (/^exception\??/i.test(text)) colException = c;
     }
 
     const firstDataRow = r + 1;
@@ -347,6 +368,8 @@ function detectLayout(sheet: ExcelJS.Worksheet): Layout | null {
       colVerified,
       colFullyCovered,
       colConclusion,
+      colBasis,
+      colException,
     );
 
     return {
@@ -360,6 +383,8 @@ function detectLayout(sheet: ExcelJS.Worksheet): Layout | null {
       colVerified,
       colFullyCovered,
       colConclusion,
+      colBasis,
+      colException,
       firstDataRow,
       lastDataRow,
       totalRow,
