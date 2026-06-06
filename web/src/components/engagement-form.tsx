@@ -211,7 +211,7 @@ export function EngagementForm({
               key={group.title}
               className="group rounded-md border border-primary/10 bg-background/60"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[var(--color-fw-band)]/70 [&::-webkit-details-marker]:hidden">
                 <span className="flex items-baseline gap-2">
                   <span>{group.title}</span>
                   <span className="text-[11px] font-normal normal-case tracking-normal text-primary/55">
