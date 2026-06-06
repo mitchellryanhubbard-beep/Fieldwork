@@ -101,7 +101,7 @@ export default async function EditEngagementPage({
         <NumberedSection
           n={4}
           title="Source files"
-          description="Upload prior-year signed audit opinion (PDF) and current-year trial balance (Excel, CSV, or PDF)."
+          description="Upload prior-year signed audited financials (PDF) and current-year trial balance (Excel, CSV, or PDF)."
         >
           <div className="space-y-4">
             <FileUpload
