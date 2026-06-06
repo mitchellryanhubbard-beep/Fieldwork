@@ -13,6 +13,7 @@ import {
   deleteConfirmationsAction,
   deletePyWorkpaperAction,
 } from "@/app/app/engagements/actions";
+import { displayAccountName } from "@/lib/account-name";
 import type { ScopedAccountListing } from "@/lib/account-workpaper-listing";
 import type { PyWorkpaper } from "@/lib/py-workpaper-repo";
 
@@ -165,13 +166,13 @@ export function WorkpapersSection({
                 <ul className="divide-y divide-primary/10 text-sm pl-6 border-l-2 border-primary/10 ml-1">
                   {fromScratchExists ? (
                     <WorkpaperRow
-                      label={`${a.name} workpaper`}
+                      label={`${displayAccountName(a.name)} workpaper`}
                       sub="Generated from scratch"
                       downloadHref={`/api/workpapers/account?engagementId=${encodeURIComponent(engagementId)}&acctNum=${encodeURIComponent(a.acctNum)}`}
                       onRemove={() =>
                         deleteAccountWorkpaperAction(engagementId, a.acctNum)
                       }
-                      removeConfirm={`Remove the from-scratch workpaper for ${a.name}? The locked sample stays so you can regenerate.`}
+                      removeConfirm={`Remove the from-scratch workpaper for ${displayAccountName(a.name)}? The locked sample stays so you can regenerate.`}
                     />
                   ) : null}
                   {confirmationsExist ? (

@@ -12,6 +12,7 @@ import {
 } from "@/lib/assertion-matrix";
 import type { TrialBalanceAccount } from "@/lib/tb-parser";
 import { findFsli, matchMatrixRow } from "@/lib/workpaper-binder";
+import { displayAccountName } from "@/lib/account-name";
 import {
   getProcedure,
   type AssertionKey,
@@ -91,7 +92,7 @@ export async function generateAccountWorkpaper(
   const wb = new ExcelJS.Workbook();
   wb.creator = "First-Pass";
   wb.created = new Date(matrix.generatedAt);
-  wb.title = `${engagement.client.name} — ${account.name} Workpaper`;
+  wb.title = `${engagement.client.name} — ${displayAccountName(account.name)} Workpaper`;
 
   buildCoverSheet(wb, {
     engagement,
@@ -181,7 +182,7 @@ function buildCoverSheet(
   sheet.getColumn(4).width = 18;
 
   const title = sheet.addRow([
-    `${account.acctNum} — ${account.name}`,
+    `${account.acctNum} — ${displayAccountName(account.name)}`,
   ]);
   title.font = { size: 18, bold: true, color: { argb: NAVY } };
   sheet.mergeCells(title.number, 1, title.number, 4);
@@ -195,7 +196,7 @@ function buildCoverSheet(
 
   sectionHeader(sheet, "Account");
   addLabelValue(sheet, "Account #", account.acctNum);
-  addLabelValue(sheet, "Account name", account.name);
+  addLabelValue(sheet, "Account name", displayAccountName(account.name));
   addLabelValue(sheet, "FSLI", fsli);
   addLabelValue(sheet, "Section", account.section);
   const cyRow = addLabelValue(sheet, "CY Balance", account.cyBalance, USD_FMT);
@@ -297,7 +298,7 @@ function buildAssertionSheet(
   sheet.getColumn(7).width = 40;
 
   const title = sheet.addRow([
-    `${account.acctNum} — ${account.name} — ${ASSERTION_LABELS[assertion]}`,
+    `${account.acctNum} — ${displayAccountName(account.name)} — ${ASSERTION_LABELS[assertion]}`,
   ]);
   title.font = { size: 14, bold: true, color: { argb: NAVY } };
   sheet.mergeCells(title.number, 1, title.number, 7);
@@ -418,13 +419,59 @@ function buildAssertionSheet(
   sectionHeader(sheet, "Conclusion");
   addTextBlock(
     sheet,
-    "Document the conclusion on this assertion. Reference exception(s) above if any.",
+    buildAssertionConclusion({
+      account,
+      assertion,
+      sampleResult,
+      matrixRow,
+    }),
   );
   sheet.addRow([]);
 
   sectionHeader(sheet, "Sign-off");
   sheet.addRow(["Preparer", "", "Date", ""]);
   sheet.addRow(["Reviewer", "", "Date", ""]);
+}
+
+// First-pass per-assertion conclusion. Describes what was tested
+// (methodology + coverage), the residual-risk level the testing was
+// calibrated against, and what the auditor still has to do (review
+// the tickmark column for exceptions and document any findings).
+function buildAssertionConclusion(args: {
+  account: TrialBalanceAccount;
+  assertion: AssertionKey;
+  sampleResult: SampleResult | undefined;
+  matrixRow: AssertionMatrixRow | undefined;
+}): string {
+  const { account, assertion, sampleResult, matrixRow } = args;
+  const assertionLabel = ASSERTION_LABELS[assertion];
+
+  if (!sampleResult) {
+    return (
+      `First-pass conclusion: No automated sample was drawn for the ${assertionLabel} assertion on ${account.acctNum} — ${displayAccountName(account.name)}. ` +
+      `The methodology is set to Manual or the required upload (AR aging) wasn't available at generation time. ` +
+      `Auditor: populate selections below by hand, document tickmarks + evidence, and update this conclusion based on test results.`
+    );
+  }
+
+  const methodLabel = METHODOLOGIES[sampleResult.methodology].label;
+  const coveragePct = (sampleResult.coveragePct * 100).toFixed(0);
+  const coverageDollar = `$${Math.round(
+    sampleResult.coverageDollar,
+  ).toLocaleString("en-US")}`;
+  const populationDollar = `$${Math.round(
+    sampleResult.populationTotal,
+  ).toLocaleString("en-US")}`;
+  const riskClause = matrixRow?.overallRiskLevel
+    ? ` Calibrated against the assertion-matrix overall risk level of ${matrixRow.overallRiskLevel}.`
+    : "";
+
+  return (
+    `First-pass conclusion: Tested ${sampleResult.selections.length} of ${sampleResult.populationCount} customers via ${methodLabel}, ` +
+    `covering ${coverageDollar} of ${populationDollar} (${coveragePct}% $ coverage; seed ${sampleResult.seed}).${riskClause} ` +
+    `Subject to auditor review of the tickmark column above — no exceptions noted in the populated rows until the auditor documents otherwise. ` +
+    `Update this paragraph to reflect any exceptions identified and the final ${assertionLabel} conclusion.`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -457,7 +504,7 @@ function buildSampleSheet(
   sheet.getColumn(6).width = 40;
 
   const title = sheet.addRow([
-    `Sample selection — ${account.acctNum} ${account.name} — ${ASSERTION_LABELS[assertion]}`,
+    `Sample selection — ${account.acctNum} ${displayAccountName(account.name)} — ${ASSERTION_LABELS[assertion]}`,
   ]);
   title.font = { size: 14, bold: true, color: { argb: NAVY } };
   sheet.mergeCells(title.number, 1, title.number, 6);
@@ -612,7 +659,7 @@ function buildAnalyticsSheet(
   sheet.getColumn(6).width = 36;
 
   const title = sheet.addRow([
-    `Analytics — ${account.acctNum} ${account.name}`,
+    `Analytics — ${account.acctNum} ${displayAccountName(account.name)}`,
   ]);
   title.font = { size: 14, bold: true, color: { argb: NAVY } };
   sheet.mergeCells(title.number, 1, title.number, 6);
@@ -1142,7 +1189,7 @@ function buildScrSheet(
   sheet.getColumn(7).width = 40;
 
   const title = sheet.addRow([
-    `Subsequent Cash Receipts — ${account.acctNum} ${account.name}`,
+    `Subsequent Cash Receipts — ${account.acctNum} ${displayAccountName(account.name)}`,
   ]);
   title.font = { size: 14, bold: true, color: { argb: NAVY } };
   sheet.mergeCells(title.number, 1, title.number, 7);
@@ -1410,16 +1457,50 @@ function buildScrSheet(
   // Conclusion + sign-off
   // -----------------------------------------------------------------------
   sectionHeader(sheet, "Conclusion");
-  const conc = sheet.addRow([
-    "Document the SCR conclusion — Existence + Valuation. Reference exceptions above if any.",
-  ]);
+  const conc = sheet.addRow([buildScrConclusion(result)]);
   conc.alignment = { vertical: "top", wrapText: true };
+  conc.height = 96;
   sheet.mergeCells(conc.number, 1, conc.number, 7);
   sheet.addRow([]);
 
   sectionHeader(sheet, "Sign-off");
   sheet.addRow(["Preparer", "", "Date", ""]);
   sheet.addRow(["Reviewer", "", "Date", ""]);
+}
+
+// First-pass SCR conclusion — narrates coverage %, collection speed,
+// and the exception counts (partial payments, unmatched receipts,
+// aged uncollected) with concrete numbers so the auditor can verify
+// or revise.
+function buildScrConclusion(
+  result: import("@/lib/scr-testing").ScrTestResult,
+): string {
+  const fmt$ = (n: number) =>
+    `$${Math.round(Math.abs(n)).toLocaleString("en-US")}`;
+  const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+  const cov = result.coverage;
+  const exc = result.exceptions;
+  const totalExc =
+    exc.partialPayments.length +
+    exc.unmatchedReceipts.length +
+    exc.uncollectedAged.length;
+
+  const speedClause =
+    cov.daysToCollectMedian !== null
+      ? ` Median days-to-collect ${cov.daysToCollectMedian}; ${pct(cov.pctCollectedWithin30)} of YE AR collected within 30 days and ${pct(cov.pctCollectedWithin60)} within 60.`
+      : "";
+
+  const exceptionClause =
+    totalExc === 0
+      ? " No exceptions identified — receipts traced cleanly to invoices, no aged YE invoices remained uncollected post-YE."
+      : ` Exceptions: ${exc.partialPayments.length} partial payment(s), ${exc.unmatchedReceipts.length} unmatched receipt(s), and ${exc.uncollectedAged.length} aged YE invoice(s) still uncollected — review the tables above and document the allowance / cutoff implications.`;
+
+  return (
+    `First-pass conclusion (Existence + Valuation): ${fmt$(cov.totalCollected)} of ${fmt$(cov.yeArTotal)} ` +
+    `YE AR (${pct(cov.coveragePct)}) was collected post-YE via ${cov.receiptCount} receipts.${speedClause}` +
+    `${exceptionClause} ` +
+    `Subject to auditor review and final conclusion.`
+  );
 }
 
 function matchStatusLabel(status: import("@/lib/scr-testing").ScrMatchStatus): string {

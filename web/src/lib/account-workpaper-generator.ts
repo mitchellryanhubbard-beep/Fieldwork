@@ -15,6 +15,7 @@ import {
   requireUploadsConfirmed,
 } from "@/lib/intake/load-canonical";
 import { generateAccountWorkpaper } from "@/lib/account-workpaper";
+import { displayAccountName } from "@/lib/account-name";
 import { findFsli, matchMatrixRow } from "@/lib/workpaper-binder";
 import {
   hasFsliInLibrary,
@@ -225,7 +226,9 @@ export function downloadFilename(
   const safeClient = engagement.client.name
     .replace(/[^A-Za-z0-9-]+/g, "_")
     .slice(0, 30);
-  const safeAcct = accountName.replace(/[^A-Za-z0-9-]+/g, "_").slice(0, 30);
+  const safeAcct = displayAccountName(accountName)
+    .replace(/[^A-Za-z0-9-]+/g, "_")
+    .slice(0, 30);
   const fy = engagement.client.fiscalYearEnd.slice(0, 4);
   return `${safeClient}-FY${fy}-WP-${acctNum}-${safeAcct}.xlsx`;
 }

@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { autosizeAllSheets } from "@/lib/excel-autosize";
+import { displayAccountName } from "@/lib/account-name";
 import type { EngagementSetup } from "@/lib/engagement-schema";
 import {
   FRAMEWORK_LABELS,
@@ -415,7 +416,7 @@ function buildScopingSheet(
           : "Below performance materiality and not flagged by the assertion matrix — no substantive procedures planned.";
 
       const row = sheet.addRow([
-        `${a.acctNum} — ${a.name}`,
+        `${a.acctNum} — ${displayAccountName(a.name)}`,
         findFsli(a.acctNum, a.name),
         a.cyBalance,
         a.pyBalance,
@@ -676,7 +677,7 @@ function buildLeadSheet(
     const pctChange = py !== 0 ? dollarChange / Math.abs(py) : null;
     const row = sheet.addRow([
       a.acctNum,
-      a.name,
+      displayAccountName(a.name),
       cy,
       py,
       "",
