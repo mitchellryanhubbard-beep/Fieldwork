@@ -276,13 +276,17 @@ function FsliChild({
     );
   }
   if (!content) {
+    // Placeholder row for FSLIs that aren't wired up yet. Matches the
+    // framed-row look of the active rows (border, bg, padding, hover
+    // tint) so every FSLI's accordion has a visually consistent
+    // Supporting Schedules + Workpapers pair.
     return (
-      <Link
-        href="#"
-        className="block text-sm text-primary/75 hover:text-primary hover:underline"
+      <div
+        className="block rounded border border-primary/10 bg-background px-3 py-2 text-sm text-primary/55 transition-colors hover:bg-[var(--color-fw-band)]/70"
+        aria-disabled="true"
       >
         {label}
-      </Link>
+      </div>
     );
   }
   return (
