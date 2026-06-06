@@ -225,7 +225,7 @@ function FsliBreakdown({
         {FSLIS.map((f) => (
           <li key={f.slug}>
             <details className="group rounded-md border border-primary/10 bg-background/60">
-              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-[var(--color-fw-band)]/70 [&::-webkit-details-marker]:hidden">
                 <span>{f.name}</span>
                 <span className="text-xs text-primary/40 transition group-open:rotate-90">
                   ▸
