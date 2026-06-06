@@ -269,7 +269,7 @@ function FsliChild({
     return (
       <Link
         href={href}
-        className="block rounded border border-primary/10 bg-background px-3 py-2 text-sm text-primary hover:bg-secondary/40"
+        className="block rounded border border-primary/10 bg-background px-3 py-2 text-sm text-primary transition-colors hover:bg-[var(--color-fw-band)]/70"
       >
         {label}
       </Link>
@@ -287,7 +287,7 @@ function FsliChild({
   }
   return (
     <details className="group/inner rounded border border-primary/10 bg-background">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm text-primary [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between rounded px-3 py-2 text-sm text-primary transition-colors hover:bg-[var(--color-fw-band)]/70 [&::-webkit-details-marker]:hidden">
         <span>{label}</span>
         <span className="text-xs text-primary/40 transition group-open/inner:rotate-90">
           ▸
