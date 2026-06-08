@@ -99,25 +99,33 @@ export function rolloverMethodologyTabs(
           },
         );
         if (omPctOfRevenue !== null && revenue !== null) {
+          // Function-form replacement so the "$" in fmtMoney/formatMillions
+          // doesn't get parsed as a backreference. Also tolerate prior
+          // bad output that may have lost the "$" sign.
+          const newPct = (omPctOfRevenue * 100).toFixed(1);
+          const newRev = formatMillions(revenue);
           next = next.replace(
-            /\(\s*≈?\s*\d+(?:\.\d+)?\s*%\s+of\s+net\s+revenue\s+of\s+\$[\d.,]+M?\s*\)/gi,
-            `(≈${(omPctOfRevenue * 100).toFixed(1)}% of net revenue of ${formatMillions(revenue)})`,
+            /\(\s*≈?\s*\d+(?:\.\d+)?\s*%\s+of\s+net\s+revenue\s+of\s+\$?[\d.,]+M?\s*\)/gi,
+            () => `(≈${newPct}% of net revenue of ${newRev})`,
           );
         }
 
         // Population dollar + customer count: "$14,200,000 across 109
         // customer accounts" (Methodology) or "Gross trade AR per TB"
-        // amount in its own cell (Results).
+        // amount in its own cell (Results). Match 1+ consecutive
+        // "totaling" so duplicate-"totaling totaling" from a prior
+        // buggy run gets cleaned up too.
         if (tradeArBalance !== null) {
+          const newMoney = fmtMoney(tradeArBalance);
           next = next.replace(
-            /(totaling\s+)\$[\d,]+(?:\.\d+)?/gi,
-            `$1${fmtMoney(tradeArBalance)}`,
+            /(?:totaling\s+)+\$?[\d,]+(?:\.\d+)?/gi,
+            () => `totaling ${newMoney}`,
           );
         }
         if (customerCount !== null) {
           next = next.replace(
             /(across\s+)\d+(\s+customer\s+accounts?)/gi,
-            `$1${customerCount}$2`,
+            (_m, pre: string, suf: string) => `${pre}${customerCount}${suf}`,
           );
         }
 
