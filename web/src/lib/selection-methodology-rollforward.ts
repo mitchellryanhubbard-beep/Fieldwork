@@ -1,18 +1,20 @@
 import ExcelJS from "exceljs";
 import type { EngagementSetup } from "@/lib/engagement-schema";
-import type { ArAging } from "@/lib/ar-aging-parser";
-import type { TrialBalance } from "@/lib/tb-parser";
-import type { SampleResult } from "@/lib/sampling-methodologies";
 
 // Re-authors the three numbered lines under the "SELECTION
 // METHODOLOGY" section of a detail-testing workpaper. The PY narrative
-// uses prose with embedded numbers ("$401,000", "Twelve (12)
-// balances", "$10,750,000", "75.7% of gross AR", etc.) that the
-// generic label-and-cell rollover can't reach. Instead we detect the
-// section by phrase signature, compute the new figures from the CY
-// sample + aging + materiality, and overwrite each line's text in
-// place with the same template the auditor wrote — just with current
-// numbers.
+// uses prose with embedded numbers (PM amount, key + haphazard counts,
+// coverage $, coverage %, below-PM population) that the generic
+// label-and-cell rollover can't reach.
+//
+// Strategy: read the workpaper's OWN values that the auditor sees
+// elsewhere in the file —
+//   - PM from engagement.materiality.performanceMateriality
+//   - Gross AR from the cell labelled "Gross AR per TB" on any tab
+//   - Total tested $ from the Selections tab's Total row
+//   - Key vs Haphazard split from the Selections tab's Basis column
+// then re-author the three lines so the paragraph is internally
+// consistent with what the workpaper itself displays.
 
 export type SelectionMethodologyRolloverResult = {
   updates: number;
@@ -22,62 +24,96 @@ export function rolloverSelectionMethodology(
   wb: ExcelJS.Workbook,
   args: {
     engagement: EngagementSetup;
-    aging: ArAging | null;
-    sample: SampleResult | null;
-    trialBalance: TrialBalance | null;
   },
 ): SelectionMethodologyRolloverResult {
-  const { engagement, aging, sample, trialBalance } = args;
-  if (!aging || !sample || sample.selections.length === 0) {
-    return { updates: 0 };
-  }
-  const pm = engagement.materiality.performanceMateriality;
+  const pm = args.engagement.materiality.performanceMateriality;
   if (pm <= 0) return { updates: 0 };
 
-  // Split the selections by reason:
-  //   key  = methodology auto-included (top-tier / risk-table-top /
-  //          mus-auto / aged-past-due)
-  //   hap  = random/haphazard fill (random / risk-table-random /
-  //          mus-hit)
-  const autoReasons = new Set([
-    "top-tier",
-    "risk-table-top",
-    "mus-auto",
-    "aged-past-due",
-  ]);
-  const keyItems = sample.selections.filter((s) => autoReasons.has(s.reason));
-  const hapItems = sample.selections.filter((s) => !autoReasons.has(s.reason));
+  // Walk every cell on every sheet, capturing the data points we need
+  // from labels: Gross AR per TB, the Selections tab's Total row, and
+  // per-row Basis labels for the key/haphazard split.
+  let grossAr: number | null = null;
+  let totalTested: number | null = null;
+  let totalCount = 0;
+  let keyCoverage = 0;
+  let keyCount = 0;
+  let hapCoverage = 0;
+  let hapCount = 0;
 
-  const keyCount = keyItems.length;
-  const keyCoverage = keyItems.reduce((s, i) => s + Math.abs(i.balance), 0);
-  const hapCount = hapItems.length;
-  const hapCoverage = hapItems.reduce((s, i) => s + Math.abs(i.balance), 0);
-  const totalCount = keyCount + hapCount;
-  const totalCoverage = keyCoverage + hapCoverage;
+  for (const sheet of wb.worksheets) {
+    const selLayout = detectSelectionsLayout(sheet);
+    if (selLayout) {
+      // Walk the data rows up to (but not including) the Total row.
+      const stopRow =
+        selLayout.totalRow !== null ? selLayout.totalRow : sheet.rowCount + 1;
+      for (let r = selLayout.firstDataRow; r < stopRow; r++) {
+        const amt = readNumber(
+          sheet.getRow(r).getCell(selLayout.colAmount).value,
+        );
+        if (amt === null || amt === 0) continue;
+        totalCount += 1;
+        const basis = selLayout.colBasis
+          ? readText(sheet.getRow(r).getCell(selLayout.colBasis))
+              .trim()
+              .toLowerCase()
+          : "";
+        if (isHaphazardBasis(basis)) {
+          hapCoverage += Math.abs(amt);
+          hapCount += 1;
+        } else {
+          keyCoverage += Math.abs(amt);
+          keyCount += 1;
+        }
+      }
+      // If the Total row carries a number, prefer it for totalTested.
+      if (selLayout.totalRow !== null) {
+        const n = readNumber(
+          sheet.getRow(selLayout.totalRow).getCell(selLayout.colAmount).value,
+        );
+        if (n !== null && n !== 0) totalTested = n;
+      }
+    }
 
-  const grossAr =
-    sumTradeAr(trialBalance) ??
-    (aging.total > 0 ? aging.total : sample.populationTotal);
-  const keyCoveragePct = grossAr > 0 ? (keyCoverage / grossAr) * 100 : 0;
+    // Look anywhere on any sheet for the "Gross AR per TB" label.
+    if (grossAr === null) {
+      sheet.eachRow({ includeEmpty: false }, (row) => {
+        for (let c = 1; c <= sheet.columnCount; c++) {
+          const label = readText(row.getCell(c)).trim();
+          if (
+            /^gross\s+(trade\s+)?(ar|a\/r|accounts?\s+receivable)\s+per\s+tb/i.test(
+              label,
+            )
+          ) {
+            for (let cc = c + 1; cc <= sheet.columnCount; cc++) {
+              const n = readNumber(row.getCell(cc).value);
+              if (n !== null) {
+                grossAr = n;
+                return;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  if (totalTested === null) totalTested = keyCoverage + hapCoverage;
+  if (totalCount === 0 || grossAr === null) return { updates: 0 };
+
+  const keyCoveragePct =
+    Math.abs(grossAr) > 0 ? (keyCoverage / Math.abs(grossAr)) * 100 : 0;
   const totalCoveragePct =
-    grossAr > 0 ? (totalCoverage / grossAr) * 100 : 0;
+    Math.abs(grossAr) > 0
+      ? (Math.abs(totalTested) / Math.abs(grossAr)) * 100
+      : 0;
 
-  // Below-PM population excludes the customers we picked for key
-  // items (they're at or above PM by definition).
-  const selectedCustNums = new Set(
-    sample.selections.map((s) => s.custNum),
-  );
-  const belowPmCustomers = aging.customers.filter(
-    (c) =>
-      Math.abs(c.total) < pm &&
-      !selectedCustNums.has(c.custNum) &&
-      Math.abs(c.total) > 0,
-  );
-  const belowPmTotal = belowPmCustomers.reduce(
-    (s, c) => s + Math.abs(c.total),
-    0,
-  );
-  const belowPmCount = belowPmCustomers.length;
+  // Below-PM population is the residual after key items: gross AR
+  // minus the key-item coverage, spread across (totalCustomers minus
+  // keyCount) accounts. We don't have the total customer count from
+  // the workpaper directly, so we approximate from the Gross AR / a
+  // typical customer balance. Fall back to "remainder" prose if we
+  // can't compute it reliably.
+  const belowPmTotal = Math.max(0, Math.abs(grossAr) - keyCoverage);
 
   const fmt$ = (n: number) =>
     `$${Math.round(n).toLocaleString("en-US")}`;
@@ -93,21 +129,18 @@ export function rolloverSelectionMethodology(
     {
       matcher: /^\s*haphazard\s+sample/i,
       replacement:
-        `Haphazard sample: from the remaining population below PM (${fmt$(belowPmTotal)} across ${belowPmCount} accounts), ` +
+        `Haphazard sample: from the remaining population below PM (${fmt$(belowPmTotal)} of residual gross AR), ` +
         `${word(hapCount)} (${hapCount}) accounts were selected on a haphazard basis to obtain coverage over the residual population and address the risk of material misstatement in the aggregate.`,
     },
     {
       matcher: /^\s*total\s+items?\s+selected/i,
       replacement:
-        `Total items selected: ${totalCount} customer balances; aggregate coverage of ${fmt$(totalCoverage)} (${totalCoveragePct.toFixed(1)}% of gross AR).`,
+        `Total items selected: ${totalCount} customer balances; aggregate coverage of ${fmt$(Math.abs(totalTested))} (${totalCoveragePct.toFixed(1)}% of gross AR).`,
     },
   ];
 
   let updates = 0;
   for (const sheet of wb.worksheets) {
-    // Only act on sheets that carry the "SELECTION METHODOLOGY"
-    // header somewhere — keeps us from accidentally rewriting an
-    // unrelated paragraph that happens to start with "Targeted".
     if (!hasSelectionMethodologyHeader(sheet)) continue;
     sheet.eachRow({ includeEmpty: false }, (row) => {
       row.eachCell({ includeEmpty: false }, (cell) => {
@@ -127,6 +160,97 @@ export function rolloverSelectionMethodology(
   return { updates };
 }
 
+// ---------------------------------------------------------------------------
+// Selections-tab detection (same signature as alt-procedures-rollforward).
+// ---------------------------------------------------------------------------
+
+type SelectionsLayout = {
+  headerRow: number;
+  firstDataRow: number;
+  totalRow: number | null;
+  colSelNum: number;
+  colCustomer: number;
+  colAmount: number;
+  colBasis: number;
+};
+
+function detectSelectionsLayout(
+  sheet: ExcelJS.Worksheet,
+): SelectionsLayout | null {
+  const maxRow = Math.min(60, sheet.rowCount);
+  for (let r = 1; r <= maxRow; r++) {
+    const row = sheet.getRow(r);
+    const cellTexts = new Map<number, string>();
+    let hasSel = false;
+    let hasCustomer = false;
+    let hasAmount = false;
+    for (let c = 1; c <= sheet.columnCount; c++) {
+      const text = readText(row.getCell(c)).trim();
+      cellTexts.set(c, text);
+      if (
+        /^sel\s*#|^selection\s*#|^item\s*#|^sample\s*#|^#\s*$/i.test(text)
+      )
+        hasSel = true;
+      if (/^customer/i.test(text)) hasCustomer = true;
+      if (
+        /inv\s*amt|invoice\s*amount|^amount|^balance|^bal\s|^total\s*\$?|^value$/i.test(
+          text,
+        )
+      )
+        hasAmount = true;
+    }
+    if (!(hasSel && hasCustomer && hasAmount)) continue;
+
+    let colSelNum = 0;
+    let colCustomer = 0;
+    let colAmount = 0;
+    let colBasis = 0;
+    for (const [c, text] of cellTexts) {
+      if (
+        /^sel\s*#|^selection\s*#|^item\s*#|^sample\s*#|^#\s*$/i.test(text)
+      )
+        colSelNum = c;
+      else if (/^customer/i.test(text)) colCustomer = c;
+      else if (
+        /inv\s*amt|invoice\s*amount|^amount|^balance|^bal\s|^total\s*\$?|^value$/i.test(
+          text,
+        )
+      )
+        colAmount = c;
+      else if (/^basis|^rationale|^reason\b/i.test(text)) colBasis = c;
+    }
+
+    const firstDataRow = r + 1;
+    let totalRow: number | null = null;
+    outer: for (let rr = firstDataRow; rr <= sheet.rowCount; rr++) {
+      for (let cc = 1; cc <= sheet.columnCount; cc++) {
+        const t = readText(sheet.getRow(rr).getCell(cc)).trim();
+        if (/^total\b/i.test(t)) {
+          totalRow = rr;
+          break outer;
+        }
+      }
+    }
+
+    return {
+      headerRow: r,
+      firstDataRow,
+      totalRow,
+      colSelNum,
+      colCustomer,
+      colAmount,
+      colBasis,
+    };
+  }
+  return null;
+}
+
+// Detect whether a Basis cell text reads "haphazard" (vs. the
+// auto-included key-item variants like "Key >PM", "Top-tier", etc.).
+function isHaphazardBasis(basis: string): boolean {
+  return /haphazard|random/i.test(basis);
+}
+
 function hasSelectionMethodologyHeader(sheet: ExcelJS.Worksheet): boolean {
   let found = false;
   sheet.eachRow({ includeEmpty: false }, (row) => {
@@ -139,8 +263,6 @@ function hasSelectionMethodologyHeader(sheet: ExcelJS.Worksheet): boolean {
   return found;
 }
 
-// Number-to-word for small whole numbers. Falls back to the digit
-// string for anything outside the table.
 function numberToWord(n: number): string {
   const words = [
     "zero",
@@ -171,19 +293,13 @@ function numberToWord(n: number): string {
   return String(n);
 }
 
-// Pick the trade-AR account balance from the TB for coverage %
-// denominator. Prefers an explicitly-Trade account, falls back to
-// any AR account, returns null if the TB has none.
-function sumTradeAr(tb: TrialBalance | null): number | null {
-  if (!tb) return null;
-  const ars = tb.accounts.filter(
-    (a) =>
-      /accounts?\s+receivable|trade\s+receivables?|^a\/r$|^ar$/i.test(a.name) &&
-      !/allowance/i.test(a.name),
-  );
-  const trade = ars.find((a) => /\btrade\b|\bcontrol\b/i.test(a.name));
-  const pick = trade ?? ars[0];
-  return pick ? Math.abs(pick.cyBalance) : null;
+function readNumber(v: ExcelJS.CellValue | undefined): number | null {
+  if (typeof v === "number") return v;
+  if (v != null && typeof v === "object" && "result" in v) {
+    const r = (v as { result: unknown }).result;
+    if (typeof r === "number") return r;
+  }
+  return null;
 }
 
 function readText(cell: ExcelJS.Cell): string {

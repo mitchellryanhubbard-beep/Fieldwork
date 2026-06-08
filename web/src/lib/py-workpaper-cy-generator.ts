@@ -208,9 +208,6 @@ export async function generateCyWorkpaperById(
   // coverage $ + %, below-PM population.
   const selMethodologyCount = rolloverSelectionMethodology(wb, {
     engagement,
-    aging: arAging,
-    sample: existenceSample,
-    trialBalance,
   }).updates;
 
   // Results-tab summary refresh. Reads the (now-CY) Selections tab,
