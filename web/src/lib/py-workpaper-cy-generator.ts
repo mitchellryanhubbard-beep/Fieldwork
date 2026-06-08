@@ -20,6 +20,7 @@ import { rolloverDsoWorkpaper } from "@/lib/dso-workpaper-rollforward";
 import { rolloverLeadSheets } from "@/lib/lead-sheet-rollforward";
 import { rolloverMethodologyTabs } from "@/lib/methodology-rollforward";
 import { rolloverPyBalances } from "@/lib/py-balance-rollforward";
+import { rolloverResultsTab } from "@/lib/results-tab-rollforward";
 import {
   writeProcedureBoxes,
   hasExistingProcedureBox,
@@ -199,6 +200,14 @@ export async function generateCyWorkpaperById(
     existenceSample,
     matrix,
   );
+
+  // Results-tab summary refresh. Reads the (now-CY) Selections tab,
+  // sums the amount column + counts rows, then writes those totals
+  // into labeled rows on the Results tab (Dollar coverage of
+  // selections, Total items selected, Coverage % of gross AR). Must
+  // run AFTER regenerateAltProceduresSelections so the Selections
+  // tab carries CY data.
+  const resultsTabCount = rolloverResultsTab(wb).updates;
 
   // Patch the AR Testing Summary Memo's PY-baked values (CY/PY balance,
   // SCR collected + coverage %, confirmation customer count) using
