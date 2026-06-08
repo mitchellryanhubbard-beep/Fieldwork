@@ -22,56 +22,56 @@ export function lockdownTitleDates(
   engagement: EngagementSetup,
 ): TitleDateLockdownResult {
   const yeIso = engagement.client.fiscalYearEnd; // YYYY-MM-DD
-  const ye = parseYe(yeIso);
-  if (!ye) return { updates: 0 };
+  const parsedYe = parseYe(yeIso);
+  if (!parsedYe) return { updates: 0 };
+  const ye: Ye = parsedYe;
 
   const longDate = formatLongDate(ye); // "December 31, 2025"
   const shortDate = formatShortDate(ye); // "12/31/25"
   const isoDate = `${ye.year}-${pad2(ye.month)}-${pad2(ye.day)}`;
+  const usLongDate = formatUsDate(ye, "long");
+
+  // Phrase signatures that ALWAYS refer to the engagement's fiscal-
+  // year-end (the date the balance sheet is "as of"). Body cells
+  // anywhere on any sheet matching these get every embedded date
+  // normalized to engagement.client.fiscalYearEnd.
+  const yePhrases =
+    /year\s+end(ed|ing)\b|as\s+of\b|for\s+the\s+year\s+ended\b|balance[-\s]sheet\s+date\b|fairly\s+stated\s+as\s+of\b|at\s+year[-\s]end\b/i;
+
+  function normalizeDatesIn(text: string): string {
+    let next = text;
+    // "Month D, YYYY" — long form
+    next = next.replace(
+      /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+20\d{2}\b/g,
+      longDate,
+    );
+    // ISO YYYY-MM-DD
+    next = next.replace(/\b20\d{2}-\d{2}-\d{2}\b/g, isoDate);
+    // M/D/YYYY — 4-digit
+    next = next.replace(/\b\d{1,2}\/\d{1,2}\/20\d{2}\b/g, usLongDate);
+    // M/D/YY — 2-digit
+    next = next.replace(/\b\d{1,2}\/\d{1,2}\/\d{2}\b/g, shortDate);
+    return next;
+  }
 
   let updates = 0;
   for (const sheet of wb.worksheets) {
-    const lookRows = Math.min(8, sheet.rowCount);
-    let done = false;
-    for (let r = 1; r <= lookRows && !done; r++) {
-      const row = sheet.getRow(r);
-      for (let c = 1; c <= sheet.columnCount && !done; c++) {
-        const cell = row.getCell(c);
+    // Walk EVERY cell — body conclusions, footers, methodology lines
+    // etc. may all reference the YE date. We only act when the cell
+    // contains a YE-anchored phrase ("year ended", "as of", etc.) so
+    // we don't accidentally clobber cutoff dates / future deadlines.
+    sheet.eachRow({ includeEmpty: false }, (row) => {
+      row.eachCell({ includeEmpty: false }, (cell) => {
         const text = readText(cell);
-        if (!text) continue;
-        // Header phrasing — only act on rows that look like a title.
-        if (
-          !/year\s+end(ed|ing)\b|as\s+of\b|for\s+the\s+year\s+ended\b|year\s+ended\s+/i.test(
-            text,
-          )
-        )
-          continue;
-
-        let next = text;
-        // "Month D, YYYY"
-        next = next.replace(
-          /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+20\d{2}\b/g,
-          longDate,
-        );
-        // ISO YYYY-MM-DD
-        next = next.replace(/\b20\d{2}-\d{2}-\d{2}\b/g, isoDate);
-        // M/D/YYYY
-        next = next.replace(
-          /\b\d{1,2}\/\d{1,2}\/20\d{2}\b/g,
-          formatUsDate(ye, "long"),
-        );
-        // M/D/YY
-        next = next.replace(/\b\d{1,2}\/\d{1,2}\/\d{2}\b/g, shortDate);
-        // bare 20YY at end-of-phrase (rare for title rows)
-        next = next.replace(/\b20\d{2}\b/g, String(ye.year));
-
+        if (!text) return;
+        if (!yePhrases.test(text)) return;
+        const next = normalizeDatesIn(text);
         if (next !== text) {
           cell.value = next;
           updates += 1;
-          done = true; // one lockdown per sheet — leave body text alone
         }
-      }
-    }
+      });
+    });
   }
   return { updates };
 }
