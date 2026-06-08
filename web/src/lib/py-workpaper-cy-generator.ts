@@ -1801,49 +1801,75 @@ function shiftNarrativeDates(wb: ExcelJS.Workbook, cyYear: number): number {
 // the workpaper was regenerated.
 function shiftDatesInString(text: string, cyYear: number): string {
   let out = text;
-  const cyYy = String(cyYear).slice(-2);
-  // Normalize every year reference to cyYear (the engagement's fiscal-
-  // year-end year). Every tab now shows the same CY across all
-  // headers and inline dates, regardless of what year the source
-  // string had. Trade-off: legitimate future dates (e.g. a 2030
-  // lease deadline) also get normalized to cyYear. Acceptable for
-  // now per user direction — re-introduce a window guard if it bites.
+  // Roll every date +1 year, but only when it sits in a sane window
+  // around cyYear (cyYear-3 .. cyYear+1). PY-frame dates (12/31/24)
+  // and CY-frame dates already living in the PY workpaper (cutoff
+  // 2/28/25) both shift +1. Far-future deadlines (lease expiring
+  // 2030) stay put so they don't tick on every regen.
+  const shouldShift = (year: number) =>
+    year >= cyYear - 3 && year <= cyYear + 1;
+  // 2-digit yy values are interpreted as 20yy.
 
   // FY/CY/PY/Q1-4 year refs.
   out = out.replace(
     /\b(FY|CY|PY|Fiscal\s+Year|Q[1-4])\s+(20\d{2})\b/gi,
-    (_full, prefix: string, _y: string) => `${prefix} ${cyYear}`,
+    (full, prefix: string, y: string) => {
+      const yearNum = parseInt(y, 10);
+      if (!shouldShift(yearNum)) return full;
+      return `${prefix} ${yearNum + 1}`;
+    },
   );
 
   // ISO date YYYY-MM-DD.
   out = out.replace(
     /\b(20\d{2})-(\d{2})-(\d{2})\b/g,
-    (_full, _y: string, m: string, d: string) => `${cyYear}-${m}-${d}`,
+    (full, y: string, m: string, d: string) => {
+      const yearNum = parseInt(y, 10);
+      if (!shouldShift(yearNum)) return full;
+      return `${yearNum + 1}-${m}-${d}`;
+    },
   );
 
   // US date M/D/YYYY.
   out = out.replace(
     /\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/g,
-    (_full, m: string, d: string, _y: string) => `${m}/${d}/${cyYear}`,
+    (full, m: string, d: string, y: string) => {
+      const yearNum = parseInt(y, 10);
+      if (!shouldShift(yearNum)) return full;
+      return `${m}/${d}/${yearNum + 1}`;
+    },
   );
 
-  // US date M/D/YY (2-digit year). Use the last two digits of cyYear.
+  // US date M/D/YY (2-digit year). Roll +1 and preserve 2-digit
+  // format; handles century wrap (99 → 00).
   out = out.replace(
     /\b(\d{1,2})\/(\d{1,2})\/(\d{2})\b/g,
-    (_full, m: string, d: string, _yy: string) => `${m}/${d}/${cyYy}`,
+    (full, m: string, d: string, yy: string) => {
+      const yearNum = 2000 + parseInt(yy, 10);
+      if (!shouldShift(yearNum)) return full;
+      const next = (parseInt(yy, 10) + 1) % 100;
+      return `${m}/${d}/${String(next).padStart(2, "0")}`;
+    },
   );
 
   // "Month D, YYYY".
   out = out.replace(
     /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(20\d{2})\b/g,
-    (_full, month: string, day: string, _y: string) =>
-      `${month} ${day}, ${cyYear}`,
+    (full, month: string, day: string, y: string) => {
+      const yearNum = parseInt(y, 10);
+      if (!shouldShift(yearNum)) return full;
+      return `${month} ${day}, ${yearNum + 1}`;
+    },
   );
 
   // "Month YYYY".
   out = out.replace(
     /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(20\d{2})\b/g,
-    (_full, month: string, _y: string) => `${month} ${cyYear}`,
+    (full, month: string, y: string) => {
+      const yearNum = parseInt(y, 10);
+      if (!shouldShift(yearNum)) return full;
+      return `${month} ${yearNum + 1}`;
+    },
   );
 
   return out;
