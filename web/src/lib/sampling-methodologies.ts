@@ -107,13 +107,13 @@ export function availableMethodologies(
 // ---------------------------------------------------------------------------
 
 export type HighCoverageParams = {
-  topTierPmPct: number;       // include if |balance| > pct * PM. Default 0.10.
+  topTierPmPct: number;       // include if |balance| >= pct * PM. Default 1.00 (PM itself).
   targetCoveragePct: number;  // random-sample until coverage ≥ pct. Default 0.60.
   minSampleSize: number;      // minimum total selections. Default 5.
 };
 
 export const HIGH_COVERAGE_DEFAULTS: HighCoverageParams = {
-  topTierPmPct: 0.10,
+  topTierPmPct: 1.0,
   targetCoveragePct: 0.60,
   minSampleSize: 5,
 };
@@ -238,7 +238,10 @@ export function runHighCoverageHybrid(args: {
   const topTier: ArCustomer[] = [];
   const remainder: ArCustomer[] = [];
   for (const c of sorted) {
-    if (Math.abs(c.total) > threshold) topTier.push(c);
+    // ">=" matches the auditor's narrative phrasing "equal to or
+    // exceeding PM" so a customer balance EXACTLY at PM also lands in
+    // the key-item tier.
+    if (Math.abs(c.total) >= threshold) topTier.push(c);
     else remainder.push(c);
   }
 
