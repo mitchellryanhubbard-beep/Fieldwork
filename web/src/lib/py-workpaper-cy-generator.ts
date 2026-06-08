@@ -22,6 +22,7 @@ import { rolloverMethodologyTabs } from "@/lib/methodology-rollforward";
 import { rolloverPyBalances } from "@/lib/py-balance-rollforward";
 import { rolloverResultsTab } from "@/lib/results-tab-rollforward";
 import { rolloverSelectionMethodology } from "@/lib/selection-methodology-rollforward";
+import { lockdownTitleDates } from "@/lib/title-date-lockdown";
 import {
   writeProcedureBoxes,
   hasExistingProcedureBox,
@@ -154,6 +155,14 @@ export async function generateCyWorkpaperById(
   // typically have residual PY-period references ("FY 2023 Audit",
   // "12/31/2023") in their banners and footnotes that need rolling.
   const dateShiftCount = shiftNarrativeDates(wb, cyYear);
+
+  // Lock the title-row date on every tab to the engagement's
+  // fiscal-year-end. shiftNarrativeDates does its best to roll
+  // generic dates +1, but title dates need to be authoritative across
+  // tabs — otherwise tabs drift apart when source dates differ. This
+  // pass runs AFTER shiftNarrativeDates so it overrides whatever that
+  // produced for the title row only.
+  const titleLockCount = lockdownTitleDates(wb, engagement).updates;
 
   // Rewrite analytic-conclusion paragraphs to reference the table data
   // above them — so the prose stays in sync with the rolled-forward
