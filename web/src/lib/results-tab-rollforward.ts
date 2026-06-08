@@ -35,6 +35,16 @@ export function rolloverResultsTab(
     totalSelected += n;
     selectionCount += 1;
   }
+  // If the workpaper's own Total row carries a number, prefer it — it
+  // reflects whatever formula the auditor authored (including special
+  // handling like "key items only"). Falls back to the sum above.
+  if (selLayout.totalRow !== null) {
+    const totalCell = selSheet
+      .getRow(selLayout.totalRow)
+      .getCell(selLayout.colAmount);
+    const n = readNumber(totalCell.value);
+    if (n !== null && n !== 0) totalSelected = n;
+  }
   if (selectionCount === 0) return { updates: 0 };
 
   // 2) Capture the Gross AR per TB value if it's labelled anywhere on
@@ -200,12 +210,16 @@ function detectSelectionsLayout(
 
     const firstDataRow = r + 1;
     let totalRow: number | null = null;
-    for (let rr = firstDataRow; rr <= sheet.rowCount; rr++) {
-      const c1text = readText(sheet.getRow(rr).getCell(1)).trim();
-      const c2text = readText(sheet.getRow(rr).getCell(2)).trim();
-      if (/^total\b/i.test(c1text) || /^total\b/i.test(c2text)) {
-        totalRow = rr;
-        break;
+    // Scan ALL columns for a "Total" / "Total tested" label. The label
+    // commonly sits in column A or B, but some templates put it in
+    // column C (e.g. when columns A and B are #/Customer respectively).
+    outer: for (let rr = firstDataRow; rr <= sheet.rowCount; rr++) {
+      for (let cc = 1; cc <= sheet.columnCount; cc++) {
+        const text = readText(sheet.getRow(rr).getCell(cc)).trim();
+        if (/^total\b/i.test(text)) {
+          totalRow = rr;
+          break outer;
+        }
       }
     }
 
