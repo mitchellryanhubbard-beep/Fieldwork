@@ -26,6 +26,8 @@ export function rolloverResultsTab(
 
   let totalSelected = 0;
   let selectionCount = 0;
+  let keyCount = 0;
+  let hapCount = 0;
   const stopRow =
     selLayout.totalRow !== null ? selLayout.totalRow : selSheet.rowCount + 1;
   for (let r = selLayout.firstDataRow; r < stopRow; r++) {
@@ -34,6 +36,18 @@ export function rolloverResultsTab(
     if (n === null || n === 0) continue;
     totalSelected += n;
     selectionCount += 1;
+    // Bucket by the row's Basis column (Key / Haphazard / etc.) so
+    // the Results tab's Key/Haphazard count cells match the Total.
+    // When no Basis column exists, default everything to key items.
+    if (selLayout.colBasis > 0) {
+      const basis = readText(selSheet.getRow(r).getCell(selLayout.colBasis))
+        .trim()
+        .toLowerCase();
+      if (/haphazard|random/.test(basis)) hapCount += 1;
+      else keyCount += 1;
+    } else {
+      keyCount += 1;
+    }
   }
   // If the workpaper's own Total row carries a number, prefer it — it
   // reflects whatever formula the auditor authored (including special
@@ -85,6 +99,8 @@ export function rolloverResultsTab(
         const replacement = computeReplacement(label, {
           totalSelected,
           selectionCount,
+          keyCount,
+          hapCount,
           grossArPerTb,
         });
         if (replacement === null) continue;
@@ -127,6 +143,8 @@ function computeReplacement(
   ctx: {
     totalSelected: number;
     selectionCount: number;
+    keyCount: number;
+    hapCount: number;
     grossArPerTb: number | null;
   },
 ): number | null {
@@ -135,6 +153,17 @@ function computeReplacement(
   }
   if (/^total\s+items?\s+selected/i.test(label)) {
     return ctx.selectionCount;
+  }
+  // "Key items selected (> PM)" — count of rows whose Basis isn't
+  // haphazard/random. Anchored to "key" at the start so it doesn't
+  // catch e.g. "Critical items reviewed".
+  if (/^key\s+items?\s+selected/i.test(label)) {
+    return ctx.keyCount;
+  }
+  // "Haphazard items selected (< PM)" — count of rows whose Basis
+  // reads haphazard or random.
+  if (/^haphazard\s+items?\s+selected/i.test(label)) {
+    return ctx.hapCount;
   }
   if (
     /^coverage\s+%?\s+of\s+gross\s+(trade\s+)?(ar|a\/r|accounts?\s+receivable)/i.test(
@@ -160,6 +189,7 @@ type SelectionsLayout = {
   colSelNum: number;
   colCustomer: number;
   colAmount: number;
+  colBasis: number;
 };
 
 function findSelectionsTab(wb: ExcelJS.Workbook): {
@@ -205,6 +235,7 @@ function detectSelectionsLayout(
     let colSelNum = 0;
     let colCustomer = 0;
     let colAmount = 0;
+    let colBasis = 0;
     for (const [c, text] of cellTexts) {
       if (
         /^sel\s*#|^selection\s*#|^item\s*#|^sample\s*#|^#\s*$/i.test(text)
@@ -217,6 +248,7 @@ function detectSelectionsLayout(
         )
       )
         colAmount = c;
+      else if (/^basis|^rationale|^reason\b/i.test(text)) colBasis = c;
     }
 
     const firstDataRow = r + 1;
@@ -241,6 +273,7 @@ function detectSelectionsLayout(
       colSelNum,
       colCustomer,
       colAmount,
+      colBasis,
     };
   }
   return null;
