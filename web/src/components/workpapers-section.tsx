@@ -87,14 +87,8 @@ export function WorkpapersSection({
     <div className="space-y-8">
       {/* ---------- PY section (on top) ---------- */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground/55">
-          <span>Prior year</span>
-          {pyWorkpapers.length > 0 ? (
-            <span className="font-normal normal-case text-foreground/55">
-              {pyWorkpapers.length} file
-              {pyWorkpapers.length === 1 ? "" : "s"}
-            </span>
-          ) : null}
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/55">
+          Prior year
         </div>
 
         <PyUploadForm engagementId={engagementId} />
