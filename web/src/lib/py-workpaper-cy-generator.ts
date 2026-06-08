@@ -1768,69 +1768,54 @@ function shiftNarrativeDates(wb: ExcelJS.Workbook, cyYear: number): number {
 // behavior that turned a stray 2030 deadline into 2031 every time
 // the workpaper was regenerated.
 function shiftDatesInString(text: string, cyYear: number): string {
-  const pyYear = cyYear - 1;
-  const pyYy = String(pyYear).slice(-2);
-  const cyYy = String(cyYear).slice(-2);
   let out = text;
+  // Roll every date +1 year, no exceptions. This includes PY-frame
+  // dates (12/31/24 → 12/31/25) AND CY-frame dates that already live
+  // in the PY workpaper — cutoff dates like 2/28/25 (two months past
+  // the PY YE) need to roll to 2/28/26 alongside the YE shift.
 
-  // FY/CY/PY/Q1-4 year refs — comparative-friendly: shift any year
-  // strictly below cyYear by +1 so a 3-column comparative
-  // (FY 2022, FY 2023, FY 2024) rolls to (FY 2023, FY 2024, FY 2025).
+  // FY/CY/PY/Q1-4 year refs.
   out = out.replace(
     /\b(FY|CY|PY|Fiscal\s+Year|Q[1-4])\s+(20\d{2})\b/gi,
-    (full, prefix: string, y: string) => {
-      const yearNum = parseInt(y, 10);
-      if (yearNum >= cyYear) return full;
-      return `${prefix} ${yearNum + 1}`;
-    },
+    (_full, prefix: string, y: string) => `${prefix} ${parseInt(y, 10) + 1}`,
   );
 
-  // ISO date YYYY-MM-DD — only shift when the year IS pyYear, so
-  // future-dated deadlines / forecasts don't tick on every rollforward.
+  // ISO date YYYY-MM-DD.
   out = out.replace(
     /\b(20\d{2})-(\d{2})-(\d{2})\b/g,
-    (full, y: string, m: string, d: string) => {
-      if (parseInt(y, 10) !== pyYear) return full;
-      return `${cyYear}-${m}-${d}`;
-    },
+    (_full, y: string, m: string, d: string) =>
+      `${parseInt(y, 10) + 1}-${m}-${d}`,
   );
 
-  // US date M/D/YYYY — same pyYear-only guard.
+  // US date M/D/YYYY.
   out = out.replace(
     /\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/g,
-    (full, m: string, d: string, y: string) => {
-      if (parseInt(y, 10) !== pyYear) return full;
-      return `${m}/${d}/${cyYear}`;
-    },
+    (_full, m: string, d: string, y: string) =>
+      `${m}/${d}/${parseInt(y, 10) + 1}`,
   );
 
-  // US date M/D/YY (2-digit year, common on schedule banners like
-  // "Gross trade receivables, 12/31/24"). Match the last two digits
-  // of pyYear; preserve 2-digit format on output.
+  // US date M/D/YY (2-digit year). Roll the 2-digit year +1 and
+  // preserve 2-digit format on output; handles century wrap (99 → 00).
   out = out.replace(
     /\b(\d{1,2})\/(\d{1,2})\/(\d{2})\b/g,
-    (full, m: string, d: string, yy: string) => {
-      if (yy !== pyYy) return full;
-      return `${m}/${d}/${cyYy}`;
+    (_full, m: string, d: string, yy: string) => {
+      const next = (parseInt(yy, 10) + 1) % 100;
+      return `${m}/${d}/${String(next).padStart(2, "0")}`;
     },
   );
 
-  // "Month D, YYYY" — pyYear-only.
+  // "Month D, YYYY".
   out = out.replace(
     /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(20\d{2})\b/g,
-    (full, month: string, day: string, y: string) => {
-      if (parseInt(y, 10) !== pyYear) return full;
-      return `${month} ${day}, ${cyYear}`;
-    },
+    (_full, month: string, day: string, y: string) =>
+      `${month} ${day}, ${parseInt(y, 10) + 1}`,
   );
 
-  // "Month YYYY" — pyYear-only.
+  // "Month YYYY".
   out = out.replace(
     /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(20\d{2})\b/g,
-    (full, month: string, y: string) => {
-      if (parseInt(y, 10) !== pyYear) return full;
-      return `${month} ${cyYear}`;
-    },
+    (_full, month: string, y: string) =>
+      `${month} ${parseInt(y, 10) + 1}`,
   );
 
   return out;
