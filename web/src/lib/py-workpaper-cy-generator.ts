@@ -19,6 +19,7 @@ import { regenerateAltProceduresSelections } from "@/lib/alt-procedures-rollforw
 import { rolloverDsoWorkpaper } from "@/lib/dso-workpaper-rollforward";
 import { rolloverLeadSheets } from "@/lib/lead-sheet-rollforward";
 import { rolloverMethodologyTabs } from "@/lib/methodology-rollforward";
+import { rolloverPyBalances } from "@/lib/py-balance-rollforward";
 import {
   writeProcedureBoxes,
   hasExistingProcedureBox,
@@ -131,6 +132,12 @@ export async function generateCyWorkpaperById(
     trialBalance,
     arAging,
   });
+
+  // Generic PY → CY balance sweep. Walks every cell; any numeric value
+  // matching a PY TB balance gets replaced with that account's CY
+  // balance. Runs AFTER the labeled-cell passes so it only catches
+  // what they missed.
+  const pyBalanceResult = rolloverPyBalances(wb, trialBalance);
 
   // Process year-labelled columns. Returns total cell-updates + per-row
   // mode info so we know whether to shift narrative dates afterwards.

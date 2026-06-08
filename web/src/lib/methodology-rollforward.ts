@@ -180,7 +180,9 @@ function matchResultsLabel(
   },
 ): number | null {
   if (
-    /^gross\s+trade\s+ar\s+per\s+tb/i.test(label) &&
+    /^gross\s+(trade\s+)?(ar|a\/r|accounts?\s+receivable)\s+per\s+tb/i.test(
+      label,
+    ) &&
     args.tradeArBalance !== null
   ) {
     return args.tradeArBalance;
