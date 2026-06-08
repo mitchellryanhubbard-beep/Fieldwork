@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ArAging, ArCustomer } from "@/lib/ar-aging-parser";
+import type { ArAging, ArCustomer, ArInvoice } from "@/lib/ar-aging-parser";
 import type { AssertionKey } from "@/lib/procedure-library";
 
 // Per-test sampling methodology registry. v1 ships High-coverage hybrid for
@@ -132,6 +132,11 @@ export type Selection = {
   custName: string;
   balance: number;
   reason: SelectionReason;
+  // Set on invoice-level samples. When present, the selection refers
+  // to this specific invoice rather than the customer's total
+  // balance, and the rollover writes the invoice row directly (same
+  // customer can appear multiple times).
+  invoiceNum?: string;
 };
 
 export type RiskLevel = "Low" | "Moderate" | "High";
@@ -221,12 +226,28 @@ export function deriveSeed(
 
 export function runHighCoverageHybrid(args: {
   customers: ArCustomer[];
+  // Optional invoice-level population. When supplied, sampling
+  // operates at the INVOICE level — each individual invoice with
+  // balance >= threshold is a key item, and the same customer can
+  // appear multiple times if they have multiple qualifying invoices.
+  // Matches the auditor's stated methodology "all invoices over PM".
+  invoices?: ArInvoice[];
   performanceMateriality: number;
   seed: string;
   params?: Partial<HighCoverageParams>;
 }): SampleResult {
   const params = { ...HIGH_COVERAGE_DEFAULTS, ...args.params };
   const pm = args.performanceMateriality;
+
+  // Invoice-level path — preferred when invoice data is available.
+  if (args.invoices && args.invoices.length > 0) {
+    return runHighCoverageHybridInvoiceLevel(
+      args.invoices,
+      pm,
+      args.seed,
+      params,
+    );
+  }
   // Sort desc by absolute balance — top-tier and random both operate over
   // this stable ordering.
   const sorted = [...args.customers].sort(
@@ -286,6 +307,83 @@ export function runHighCoverageHybrid(args: {
     methodology: "highCoverageHybrid",
     params,
     seed: args.seed,
+    populationTotal,
+    populationCount: sorted.length,
+    selections,
+    coverageDollar: coverage,
+    coveragePct: populationTotal === 0 ? 0 : coverage / populationTotal,
+  };
+}
+
+// Invoice-level high-coverage hybrid. Every individual invoice whose
+// |balance| >= threshold (default PM) becomes a key item; same
+// customer can appear multiple times if they carry multiple
+// qualifying invoices. Random-fill from the below-threshold remainder
+// until coverage target is hit.
+function runHighCoverageHybridInvoiceLevel(
+  invoices: ArInvoice[],
+  pm: number,
+  seed: string,
+  params: HighCoverageParams,
+): SampleResult {
+  const sorted = [...invoices].sort(
+    (a, b) => Math.abs(b.total) - Math.abs(a.total),
+  );
+  const populationTotal = sorted.reduce(
+    (acc, i) => acc + Math.abs(i.total),
+    0,
+  );
+
+  const threshold = params.topTierPmPct * pm;
+  const topTier: ArInvoice[] = [];
+  const remainder: ArInvoice[] = [];
+  for (const inv of sorted) {
+    if (Math.abs(inv.total) >= threshold) topTier.push(inv);
+    else remainder.push(inv);
+  }
+
+  const rand = mulberry32(seedToInt(seed));
+  const shuffled = [...remainder];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const target = params.targetCoveragePct * populationTotal;
+  let coverage = topTier.reduce((acc, inv) => acc + Math.abs(inv.total), 0);
+  const randomPicks: ArInvoice[] = [];
+  for (const inv of shuffled) {
+    if (
+      coverage >= target &&
+      topTier.length + randomPicks.length >= params.minSampleSize
+    ) {
+      break;
+    }
+    randomPicks.push(inv);
+    coverage += Math.abs(inv.total);
+  }
+
+  const selections: Selection[] = [
+    ...topTier.map((inv) => ({
+      custNum: inv.custNum,
+      custName: inv.custName,
+      invoiceNum: inv.invoiceNum,
+      balance: inv.total,
+      reason: "top-tier" as const,
+    })),
+    ...randomPicks.map((inv) => ({
+      custNum: inv.custNum,
+      custName: inv.custName,
+      invoiceNum: inv.invoiceNum,
+      balance: inv.total,
+      reason: "random" as const,
+    })),
+  ];
+
+  return {
+    methodology: "highCoverageHybrid",
+    params,
+    seed,
     populationTotal,
     populationCount: sorted.length,
     selections,
@@ -559,6 +657,7 @@ export function runSampling(args: {
     case "highCoverageHybrid":
       return runHighCoverageHybrid({
         customers: args.aging.customers,
+        invoices: args.aging.invoices,
         performanceMateriality: args.performanceMateriality,
         seed,
         params: args.params,

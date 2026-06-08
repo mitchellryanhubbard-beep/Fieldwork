@@ -76,12 +76,23 @@ export function regenerateAltProceduresSelections(
 
     // Take the methodology's full selection list in its natural order
     // (top-tier first, then random fill). Drop sampled customers we
-    // can't find invoices for — they'd require manual handling. For
-    // each kept customer, the representative test item is their
+    // can't find invoices for — they'd require manual handling.
+    //
+    // If the sample was drawn at INVOICE level (each selection carries
+    // an invoiceNum), look up that exact invoice. Same customer can
+    // legitimately appear multiple times. If the sample was drawn at
+    // CUSTOMER level (no invoiceNum), fall back to the customer's
     // largest open invoice.
     type Pick = { invoice: ArInvoice; reason: string };
     const picks: Pick[] = [];
     for (const sel of sample.selections) {
+      if (sel.invoiceNum) {
+        const candidates = invoicesByCust.get(sel.custNum) ?? [];
+        const exact = candidates.find((i) => i.invoiceNum === sel.invoiceNum);
+        if (!exact) continue;
+        picks.push({ invoice: exact, reason: sel.reason });
+        continue;
+      }
       const candidates = invoicesByCust.get(sel.custNum);
       if (!candidates || candidates.length === 0) continue;
       const largest = [...candidates].sort((a, b) => b.total - a.total)[0];

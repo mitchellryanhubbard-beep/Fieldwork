@@ -123,8 +123,8 @@ export function rolloverSelectionMethodology(
     {
       matcher: /^\s*targeted\s*\(?key[-\s]?item\)?/i,
       replacement:
-        `Targeted (key-item) selection: all customer balances equal to or exceeding performance materiality (${fmt$(pm)}) were selected for testing. ` +
-        `${word(keyCount)} (${keyCount}) balances met this threshold, providing coverage of ${fmt$(keyCoverage)} (${keyCoveragePct.toFixed(1)}% of gross AR).`,
+        `Targeted (key-item) selection: all invoices equal to or exceeding performance materiality (${fmt$(pm)}) were selected for testing. ` +
+        `${word(keyCount)} (${keyCount}) invoices met this threshold, providing coverage of ${fmt$(keyCoverage)} (${keyCoveragePct.toFixed(1)}% of gross AR).`,
     },
     {
       matcher: /^\s*haphazard\s+sample/i,
@@ -135,7 +135,7 @@ export function rolloverSelectionMethodology(
     {
       matcher: /^\s*total\s+items?\s+selected/i,
       replacement:
-        `Total items selected: ${totalCount} customer balances; aggregate coverage of ${fmt$(Math.abs(totalTested))} (${totalCoveragePct.toFixed(1)}% of gross AR).`,
+        `Total items selected: ${totalCount} invoices; aggregate coverage of ${fmt$(Math.abs(totalTested))} (${totalCoveragePct.toFixed(1)}% of gross AR).`,
     },
   ];
 
