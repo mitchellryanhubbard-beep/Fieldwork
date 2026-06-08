@@ -109,6 +109,13 @@ export function regenerateAltProceduresSelections(
       const emptyRows: ExcelJS.CellValue[][] = [];
       for (let i = 0; i < rowDelta; i++) emptyRows.push([]);
       sheet.spliceRows(layout.lastDataRow + 1, 0, ...emptyRows);
+      // ExcelJS spliceRows doesn't auto-shift formula refs that point
+      // to rows past the insertion point — so a "=D8/D11" formula
+      // sitting below the table would still reference D8/D11 after
+      // rows were inserted above it, even though those cells now
+      // point to different content. Walk all formula cells and shift
+      // any row ref >= the insertion point.
+      shiftFormulaRowRefs(sheet, layout.lastDataRow + 1, rowDelta);
       // Apply the captured style to each inserted row's cells.
       for (
         let r = layout.lastDataRow + 1;
@@ -124,6 +131,13 @@ export function regenerateAltProceduresSelections(
       }
     } else if (rowDelta < 0) {
       sheet.spliceRows(layout.firstDataRow + sampleRowCount, -rowDelta);
+      // Same formula-ref shift after a delete — refs pointing to
+      // rows past the removed range need to come UP by |rowDelta|.
+      shiftFormulaRowRefs(
+        sheet,
+        layout.firstDataRow + sampleRowCount,
+        rowDelta,
+      );
     }
     const effectiveFirstDataRow = layout.firstDataRow;
     const effectiveLastDataRow = layout.firstDataRow + sampleRowCount - 1;
@@ -691,4 +705,51 @@ function colNumToLetter(n: number): string {
     num = Math.floor((num - 1) / 26);
   }
   return s;
+}
+
+// Walks every formula cell on the sheet. For each cell reference in
+// the formula (e.g. "D11", "$D$11", "Sheet1!D11"), if the row number
+// is >= startRow, shift it by +delta. Skips row refs in absolute-
+// reference form ONLY when the row is locked AND the ref points
+// inside the inserted range (in which case auditor intent is
+// ambiguous — but we still shift to keep math correct).
+//
+// Limits:
+//   - Only handles row-shift on the SAME sheet. Cross-sheet refs
+//     (Sheet2!A1) are also shifted, but if the splice happened on
+//     Sheet2, the formula on Sheet1 wouldn't know about it. Out of
+//     scope for now.
+//   - Does NOT handle range refs like A1:B10 — those would need
+//     each end of the range shifted independently. Add if needed.
+function shiftFormulaRowRefs(
+  sheet: ExcelJS.Worksheet,
+  startRow: number,
+  delta: number,
+): void {
+  if (delta === 0) return;
+  sheet.eachRow({ includeEmpty: false }, (row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      const v = cell.value;
+      if (v == null || typeof v !== "object") return;
+      if (!("formula" in v)) return;
+      const formula = (v as { formula: unknown }).formula;
+      if (typeof formula !== "string") return;
+      const updated = formula.replace(
+        /(\$?)([A-Z]+)(\$?)(\d+)/g,
+        (_full, absCol: string, col: string, absRow: string, rowStr: string) => {
+          const r = parseInt(rowStr, 10);
+          if (r < startRow) return `${absCol}${col}${absRow}${rowStr}`;
+          const nr = r + delta;
+          if (nr < 1) return `${absCol}${col}${absRow}${rowStr}`;
+          return `${absCol}${col}${absRow}${nr}`;
+        },
+      );
+      if (updated !== formula) {
+        cell.value = {
+          ...(v as object),
+          formula: updated,
+        } as ExcelJS.CellValue;
+      }
+    });
+  });
 }
