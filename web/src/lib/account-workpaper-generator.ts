@@ -136,7 +136,11 @@ export async function generateAccountWorkpaperById(
         acctNum,
         assertion,
         seed: stored?.seed,
-        params: stored?.params,
+        // Intentionally NOT passing stored.params — every
+        // regeneration resolves sampling parameters (e.g.
+        // topTierPmPct) against current defaults so engagement-level
+        // changes take effect without requiring a re-lock. Seed is
+        // still honoured for random-fill reproducibility.
         overallRiskLevel: matrixRow?.overallRiskLevel,
       });
       if (result) {

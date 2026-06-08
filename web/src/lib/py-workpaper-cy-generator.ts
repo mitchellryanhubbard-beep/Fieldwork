@@ -1326,7 +1326,14 @@ async function loadExistenceSampleForFsli(args: {
     acctNum: arAccount.acctNum,
     assertion: "Existence",
     seed: stored?.seed,
-    params: stored?.params,
+    // Intentionally NOT passing stored.params. Every rollforward
+    // resolves the sampling parameters against the CURRENT defaults
+    // in sampling-methodologies.ts. This guarantees that
+    // engagement-level changes (PM, methodology defaults like the
+    // topTierPmPct threshold) take effect on the next roll without
+    // requiring the auditor to manually re-lock the workpaper
+    // settings. Seed is still honoured for reproducibility of the
+    // random-fill order.
   });
 }
 
