@@ -59,7 +59,23 @@ export function rolloverPyBalances(
         const cy = pyToCy.get(rounded);
         if (cy === undefined) return;
         if (cy === rounded) return;
-        cell.value = cy;
+        // Preserve any existing formula — just refresh the cached
+        // result. Excel recomputes on open, so if the formula
+        // references TB-driven cells we've also updated, the final
+        // result will be correct.
+        if (
+          v != null &&
+          typeof v === "object" &&
+          "formula" in v &&
+          typeof (v as { formula: unknown }).formula === "string"
+        ) {
+          cell.value = {
+            ...(v as object),
+            result: cy,
+          } as ExcelJS.CellValue;
+        } else {
+          cell.value = cy;
+        }
         updates++;
       });
     });

@@ -88,17 +88,28 @@ export function rolloverResultsTab(
           grossArPerTb,
         });
         if (replacement === null) continue;
-        // Find the first numeric or empty cell to the right of the
-        // label cell and write there.
+        // Find the first numeric / formula / empty cell to the right
+        // of the label cell. Prefer preserving an existing formula —
+        // just update its cached result so the display is right until
+        // Excel recomputes on open. Only overwrite with a static value
+        // when the cell is plain numeric or empty.
         for (let cc = c + 1; cc <= sheet.columnCount; cc++) {
           const target = row.getCell(cc);
           const tv = target.value;
-          const isNumeric =
-            typeof tv === "number" ||
-            (tv != null &&
-              typeof tv === "object" &&
-              "result" in tv &&
-              typeof (tv as { result: unknown }).result === "number");
+          const hasFormula =
+            tv != null &&
+            typeof tv === "object" &&
+            "formula" in tv &&
+            typeof (tv as { formula: unknown }).formula === "string";
+          if (hasFormula) {
+            target.value = {
+              ...(tv as object),
+              result: replacement,
+            } as ExcelJS.CellValue;
+            updates += 1;
+            break;
+          }
+          const isNumeric = typeof tv === "number";
           if (isNumeric || tv == null) {
             target.value = replacement;
             updates += 1;

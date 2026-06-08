@@ -152,7 +152,22 @@ export function rolloverMethodologyTabs(
         if (replacement === null) continue;
         for (let cc = c + 1; cc <= sheet.columnCount; cc++) {
           const target = row.getCell(cc);
-          if (typeof target.value === "number") {
+          const tv = target.value;
+          const hasFormula =
+            tv != null &&
+            typeof tv === "object" &&
+            "formula" in tv &&
+            typeof (tv as { formula: unknown }).formula === "string";
+          if (hasFormula) {
+            // Preserve the formula — only refresh the cached result.
+            target.value = {
+              ...(tv as object),
+              result: replacement,
+            } as ExcelJS.CellValue;
+            sheetUpdates += 1;
+            break;
+          }
+          if (typeof tv === "number") {
             target.value = replacement;
             sheetUpdates += 1;
             break;
