@@ -21,6 +21,7 @@ import { rolloverLeadSheets } from "@/lib/lead-sheet-rollforward";
 import { rolloverMethodologyTabs } from "@/lib/methodology-rollforward";
 import { rolloverPyBalances } from "@/lib/py-balance-rollforward";
 import { rolloverResultsTab } from "@/lib/results-tab-rollforward";
+import { rolloverSelectionMethodology } from "@/lib/selection-methodology-rollforward";
 import {
   writeProcedureBoxes,
   hasExistingProcedureBox,
@@ -200,6 +201,17 @@ export async function generateCyWorkpaperById(
     existenceSample,
     matrix,
   );
+
+  // Selection Methodology narrative refresh — rewrites the three
+  // numbered prose lines (Targeted key-item / Haphazard sample /
+  // Total items) with CY-driven values: PM, key + haphazard counts,
+  // coverage $ + %, below-PM population.
+  const selMethodologyCount = rolloverSelectionMethodology(wb, {
+    engagement,
+    aging: arAging,
+    sample: existenceSample,
+    trialBalance,
+  }).updates;
 
   // Results-tab summary refresh. Reads the (now-CY) Selections tab,
   // sums the amount column + counts rows, then writes those totals
